@@ -1,0 +1,132 @@
+.menu {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(75, 184, 232, 0.18), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(80, 79, 79, 0.1), transparent 40%),
+    var(--atc-surface);
+}
+
+.menu-card {
+  width: min(520px, 100%);
+  padding: 32px;
+  border: 1px solid var(--atc-border);
+  border-radius: 16px;
+  background: var(--atc-white);
+  box-shadow: var(--atc-shadow);
+}
+
+.menu-brand {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.menu-brand h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+
+.menu-brand p {
+  margin: 0;
+}
+
+.menu-logo {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: var(--atc-primary);
+  color: var(--atc-white);
+}
+
+.menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.menu-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 18px 20px;
+  border: 1px solid var(--atc-border);
+  border-radius: 12px;
+  background: var(--atc-white);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.menu-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-option strong {
+  font-size: 16px;
+}
+
+.menu-option small {
+  color: var(--atc-muted);
+}
+
+.menu-option:hover:not(:disabled) {
+  border-color: var(--atc-primary);
+  transform: translateY(-1px);
+}
+
+.menu-option-primary {
+  border-color: var(--atc-primary);
+  background: var(--atc-primary);
+  color: var(--atc-white);
+}
+
+.menu-option-primary small {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.menu-option-primary:hover:not(:disabled) {
+  background: var(--atc-primary-strong);
+}
+
+.menu-option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--atc-surface);
+}
+
+.menu-tag {
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--atc-border);
+  color: var(--atc-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.menu-resume {
+  display: block;
+  margin: 18px auto 0;
+  border: none;
+  background: none;
+  color: var(--atc-primary-strong);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.menu-resume:hover {
+  text-decoration: underline;
+}

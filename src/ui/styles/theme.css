@@ -1,0 +1,230 @@
+/* Paleta del proyecto: #4BB8E8 · #FFFFFF · #000000 · #D6DEE5 · #EFF2F4 · #504F4F */
+:root {
+  --atc-primary: #4bb8e8;
+  --atc-primary-strong: #2a9fd3;
+  --atc-primary-soft: rgba(75, 184, 232, 0.14);
+  --atc-white: #ffffff;
+  --atc-black: #000000;
+  --atc-border: #d6dee5;
+  --atc-surface: #eff2f4;
+  --atc-muted: #504f4f;
+  --atc-danger: #d64545;
+
+  --atc-radius: 10px;
+  --atc-radius-sm: 6px;
+  --atc-shadow: 0 6px 24px rgba(0, 0, 0, 0.14);
+  --atc-font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--atc-font);
+  font-size: 14px;
+  color: var(--atc-black);
+  background: var(--atc-surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+/* --------------------------------------------------------------- botones */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--atc-border);
+  border-radius: var(--atc-radius-sm);
+  background: var(--atc-white);
+  color: var(--atc-black);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--atc-primary);
+  background: var(--atc-primary-soft);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--atc-primary);
+  border-color: var(--atc-primary);
+  color: var(--atc-white);
+  font-weight: 600;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--atc-primary-strong);
+  border-color: var(--atc-primary-strong);
+}
+
+.btn-danger:hover:not(:disabled) {
+  border-color: var(--atc-danger);
+  background: rgba(214, 69, 69, 0.08);
+  color: var(--atc-danger);
+}
+
+.btn-icon {
+  width: 36px;
+  padding: 0;
+}
+
+.btn-sm {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+/* --------------------------------------------------------------- controles */
+
+.segmented {
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--atc-surface);
+  border: 1px solid var(--atc-border);
+  border-radius: var(--atc-radius-sm);
+}
+
+.segmented button {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--atc-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.segmented button[aria-pressed='true'] {
+  background: var(--atc-white);
+  color: var(--atc-black);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--atc-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--atc-border);
+  border-radius: var(--atc-radius-sm);
+  background: var(--atc-white);
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--atc-primary);
+  box-shadow: 0 0 0 3px var(--atc-primary-soft);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle input {
+  appearance: none;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--atc-border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.toggle input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--atc-white);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s;
+}
+
+.toggle input:checked {
+  background: var(--atc-primary);
+}
+
+.toggle input:checked::after {
+  transform: translateX(16px);
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+}
+
+.muted {
+  color: var(--atc-muted);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
