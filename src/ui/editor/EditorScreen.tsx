@@ -7,6 +7,7 @@ import { BackIcon, ExportIcon, RedoIcon, UndoIcon } from '../icons';
 import { MapView } from '../map/MapView';
 import { ExportDialog } from './ExportDialog';
 import { HintBar } from './HintBar';
+import { PresetMenu } from './PresetMenu';
 import { SceneContext } from './sceneContext';
 import { ToastView } from './ToastView';
 import { Toolbar } from './Toolbar';
@@ -61,9 +62,12 @@ export function EditorScreen() {
     <SceneContext.Provider value={scene}>
       <div className="editor">
         <header className="editor-header">
-          <button className="btn btn-sm" onClick={() => setEditor({ screen: 'menu', tool: null })}>
-            <BackIcon size={16} /> Menú
-          </button>
+          <div className="row">
+            <button className="btn btn-sm" onClick={() => setEditor({ screen: 'menu', tool: null })}>
+              <BackIcon size={16} /> Menú
+            </button>
+            <PresetMenu />
+          </div>
           <input
             className="input editor-name"
             value={project.name}

@@ -1,3 +1,4 @@
+import { presetById } from '../../domain/presets/presets';
 import { useEditorStore } from '../../state/editorStore';
 import { useProjectStore } from '../../state/projectStore';
 import { useScene } from './sceneContext';
@@ -6,12 +7,17 @@ function useHint(): string | null {
   const scene = useScene();
   const { tool, areaMode, trackMode } = useEditorStore();
   const hasTrack = useProjectStore((s) => s.project.track.anchors.length >= 2);
+  const preset = presetById(useProjectStore((s) => s.project.preset));
   switch (tool) {
     case 'area':
+      if (scene && preset?.kind === 'scene') return 'El área es la del escenario 3D del preset · cámbialo o vuelve al mapa libre desde «Presets»';
       if (scene) return 'Arrastra los vértices para ajustar el área · clic derecho en un vértice para quitarlo';
-      return areaMode === 'rectangle'
-        ? 'Haz clic en dos esquinas opuestas para delimitar el área'
-        : 'Haz clic para añadir vértices · clic en el primero, doble clic o Enter para cerrar · Esc cancela';
+      return (
+        (preset?.kind === 'circuit' ? `Delimita el área sobre ${preset.name} (contorno amarillo) · ` : '') +
+        (areaMode === 'rectangle'
+          ? 'Haz clic en dos esquinas opuestas para delimitar el área'
+          : 'Haz clic para añadir vértices · clic en el primero, doble clic o Enter para cerrar · Esc cancela')
+      );
     case 'track':
       return {
         points: 'Clic para añadir puntos de paso · arrastra un punto para moverlo · doble clic: nodo Bézier · clic derecho: borrar',

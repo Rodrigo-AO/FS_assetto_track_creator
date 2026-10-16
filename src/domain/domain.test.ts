@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { anchor, ll, ovalProject } from '../test/fixtures';
-import { LocalProjection } from './geo/projection';
+import { GeoreferencedProjection, LocalProjection } from './geo/projection';
 import { multiPolygonArea } from './geometry/polygon';
 import { resample, simplify } from './geometry/polyline';
 import { distance, vec } from './geometry/vec2';
@@ -18,6 +18,23 @@ describe('proyección local', () => {
     const back = p.toLocal(p.toLatLng(vec(123.4, -56.7)));
     expect(back.x).toBeCloseTo(123.4, 6);
     expect(back.y).toBeCloseTo(-56.7, 6);
+  });
+
+  it('georreferenciada: ida y vuelta, y aplica escala, giro y desplazamiento', () => {
+    const origin = { lat: 41.57, lng: 2.26 };
+    const g = new GeoreferencedProjection({ origin, scale: 1.01, rotationDeg: 30, offset: [-200, 50] });
+    const back = g.toLocal(g.toLatLng(vec(310.5, -42.25)));
+    expect(back.x).toBeCloseTo(310.5, 5);
+    expect(back.y).toBeCloseTo(-42.25, 5);
+    // El origen del circuito cae en `offset` metros (este, norte) del origen geográfico.
+    const tangent = new LocalProjection(origin);
+    const zero = tangent.toLocal(g.toLatLng(vec(0, 0)));
+    expect(zero.x).toBeCloseTo(-200, 5);
+    expect(zero.y).toBeCloseTo(50, 5);
+    // 100 m hacia +x del circuito → 101 m girados 30° en el plano este-norte.
+    const east = tangent.toLocal(g.toLatLng(vec(100, 0)));
+    expect(east.x - zero.x).toBeCloseTo(101 * Math.cos(Math.PI / 6), 4);
+    expect(east.y - zero.y).toBeCloseTo(101 * Math.sin(Math.PI / 6), 4);
   });
 });
 

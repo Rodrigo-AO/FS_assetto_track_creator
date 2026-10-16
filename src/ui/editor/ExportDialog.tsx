@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
+import { circuitCheckWarnings } from '../../domain/presets/circuit';
 import { fetchSatelliteTexture } from '../../export/satellite';
 import { buildTrackFiles, exportWarnings, trackIdFromName, validateForExport, type TrackFiles } from '../../export/trackPackage';
 import { useEditorStore } from '../../state/editorStore';
 import { useProjectStore } from '../../state/projectStore';
 import { CloseIcon, ExportIcon } from '../icons';
+import { presetById } from '../../domain/presets/presets';
 import { downloadZip, fetchAcStatus, installTrack, type AcStatus } from './exportService';
+import { fetchCircuitStatus, fetchPresetManifest, loadCircuitEnvironment, loadPresetEnvironment, requirementText } from './presetService';
 import { useScene } from './sceneContext';
+import { useCircuitCheck } from './useCircuitSurfaces';
 
 type Status = { kind: 'idle' } | { kind: 'busy'; text: string } | { kind: 'done'; text: string } | { kind: 'error'; text: string };
 
@@ -18,16 +22,40 @@ export function ExportDialog() {
   const [ac, setAc] = useState<AcStatus | null>(null);
   const [status, setStatus] = useState<Status>({ kind: 'idle' });
 
+  const preset = presetById(project.preset);
+  const [presetSize, setPresetSize] = useState<number | null>(null);
+  const [circuitInstalled, setCircuitInstalled] = useState<boolean | null>(null);
+  const circuitCheck = useCircuitCheck();
+
   useEffect(() => {
     fetchAcStatus().then(setAc);
   }, []);
+  useEffect(() => {
+    if (preset?.kind === 'scene') fetchPresetManifest(preset.id).then((m) => setPresetSize(m.kn5Bytes)).catch(() => setPresetSize(null));
+    if (preset?.kind === 'circuit') fetchCircuitStatus(preset).then(setCircuitInstalled);
+  }, [preset]);
 
   const trackId = trackIdFromName(project.name);
   const errors = validateForExport(project, scene);
-  const warnings = scene ? exportWarnings(project, scene) : [];
+  if (preset?.kind === 'circuit' && circuitInstalled === false) errors.push(`Falta el circuito en Assetto Corsa. ${requirementText(preset)}`);
+  const warnings = scene ? [...exportWarnings(project, scene), ...(circuitCheck ? circuitCheckWarnings(circuitCheck) : [])] : [];
   const busy = status.kind === 'busy';
 
   async function build(): Promise<TrackFiles> {
+    if (preset?.kind === 'circuit' && scene) {
+      setStatus({ kind: 'busy', text: `Leyendo el circuito «${preset.name}» de la instalación de AC…` });
+      const circuit = await loadCircuitEnvironment(preset, scene);
+      setStatus({ kind: 'busy', text: 'Generando el trazado sobre el suelo del circuito…' });
+      await new Promise((r) => setTimeout(r, 30));
+      return buildTrackFiles(project, { trackId, perimeterWalls, satellite: null, circuit });
+    }
+    if (preset?.kind === 'scene') {
+      setStatus({ kind: 'busy', text: `Descargando el escenario 3D «${preset.name}»…` });
+      const environment = await loadPresetEnvironment(preset.id);
+      setStatus({ kind: 'busy', text: 'Generando el trazado sobre el relieve…' });
+      await new Promise((r) => setTimeout(r, 30));
+      return buildTrackFiles(project, { trackId, perimeterWalls, satellite: null, preset: environment });
+    }
     let sat = null;
     if (satellite && scene) {
       setStatus({ kind: 'busy', text: 'Descargando imagen satélite…' });
@@ -75,10 +103,34 @@ export function ExportDialog() {
             <span className="field-label">Carpeta de la pista</span>
             <code className="code">content/tracks/{trackId}</code>
           </div>
-          <label className="toggle">
-            <span>Imagen satélite como textura del suelo</span>
-            <input type="checkbox" checked={satellite} onChange={(e) => setSatellite(e.target.checked)} />
-          </label>
+          {preset?.kind === 'circuit' ? (
+            <div className="field">
+              <span className="field-label">Circuito de Assetto Corsa</span>
+              <p className="panel-text">
+                {preset.name}
+                <br />
+                <span className="muted">
+                  La pista carga el circuito instalado (<code>content/tracks/{preset.acTrack}</code>) sin copiarlo: quien la use necesita
+                  tenerlo instalado. Conos, líneas y coches se apoyan en su suelo.
+                </span>
+              </p>
+            </div>
+          ) : preset ? (
+            <div className="field">
+              <span className="field-label">Escenario 3D</span>
+              <p className="panel-text">
+                {preset.name}
+                {presetSize !== null && <span className="muted"> · {(presetSize / 1e6).toFixed(1)} MB</span>}
+                <br />
+                <span className="muted">Modelo de Blender hecho a partir de imágenes del lugar; conos, líneas y coches se apoyan en su suelo.</span>
+              </p>
+            </div>
+          ) : (
+            <label className="toggle">
+              <span>Imagen satélite como textura del suelo</span>
+              <input type="checkbox" checked={satellite} onChange={(e) => setSatellite(e.target.checked)} />
+            </label>
+          )}
           <label className="toggle">
             <span>Muro invisible en el límite del área</span>
             <input type="checkbox" checked={perimeterWalls} onChange={(e) => setPerimeterWalls(e.target.checked)} />

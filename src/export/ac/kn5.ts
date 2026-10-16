@@ -72,7 +72,15 @@ export interface Kn5Model {
 
 const IDENTITY = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 
-function boundingSphere(positions: Float32Array): { center: [number, number, number]; radius: number } {
+/**
+ * Margen (m) que se suma al radio de las mallas no renderizables. AC deja de dibujar una malla
+ * visible cuando una invisible tiene casi la misma esfera envolvente (los conos azules
+ * desaparecían por su malla de colisión, que ocupa lo mismo). Una malla que no se dibuja no
+ * pierde nada con una esfera más holgada.
+ */
+export const HIDDEN_SPHERE_MARGIN_M = 1;
+
+export function boundingSphere(positions: Float32Array): { center: [number, number, number]; radius: number } {
   const min = [Infinity, Infinity, Infinity];
   const max = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < positions.length; i += 3) {
@@ -107,7 +115,8 @@ function writeNode(w: ByteWriter, node: Kn5Node): void {
     w.i32(mesh.indices.length);
     for (const idx of mesh.indices) w.u16(idx);
     const { center, radius } = boundingSphere(mesh.positions);
-    w.i32(mesh.material).i32(0).f32(0).f32(0).f32s(center).f32(radius).u8(mesh.renderable ? 1 : 0);
+    const sphereRadius = mesh.renderable ? radius : radius + HIDDEN_SPHERE_MARGIN_M;
+    w.i32(mesh.material).i32(0).f32(0).f32(0).f32s(center).f32(sphereRadius).u8(mesh.renderable ? 1 : 0);
   }
   for (const child of node.children) writeNode(w, child);
 }

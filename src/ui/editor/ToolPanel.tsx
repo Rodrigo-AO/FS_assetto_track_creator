@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { presetAssets, presetById, type CircuitPreset } from '../../domain/presets/presets';
+import { parseTerrain, terrainRange, type TerrainJson } from '../../domain/presets/terrain';
 import { CONE_COLORS, CONE_SPECS } from '../../domain/cones/coneSpecs';
 import * as actions from '../../domain/project/actions';
 import { createEmptyProject } from '../../domain/project/types';
@@ -48,15 +50,85 @@ function NumberInput({ value, min, max, step, onCommit }: { value: number; min: 
 
 // --------------------------------------------------------------------------- paneles
 
+/** Desnivel del terreno del preset (se descarga terrain.json una vez). */
+function usePresetRelief(id: string | null): number | null {
+  const [relief, setRelief] = useState<number | null>(null);
+  useEffect(() => {
+    setRelief(null);
+    if (!id) return;
+    let alive = true;
+    fetch(presetAssets(id).terrain)
+      .then((r) => r.json())
+      .then((json: TerrainJson) => {
+        const { min, max } = terrainRange(parseTerrain(json));
+        if (alive) setRelief(max - min);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+  return relief;
+}
+
+function PresetAreaPanel({ presetId }: { presetId: string }) {
+  const preset = presetById(presetId)!;
+  const commit = useProjectStore((s) => s.commit);
+  const relief = usePresetRelief(presetId);
+  return (
+    <div className="stack">
+      <img className="preset-preview" src={presetAssets(presetId).preview} alt={`Escenario 3D de ${preset.name}`} />
+      <p className="panel-text">
+        <strong>{preset.name}</strong> · {preset.description}
+      </p>
+      <p className="muted panel-text">
+        El área es la del escenario 3D y no se puede editar.
+        {relief !== null && ` Desnivel del terreno: ${relief.toFixed(1)} m (los conos y líneas se apoyan en él al exportar).`}
+      </p>
+      <button className="btn btn-sm" onClick={() => commit(actions.clearPreset)}>
+        Pasar a mapa libre (área editable)
+      </button>
+    </div>
+  );
+}
+
+/** Circuito de AC sobre el que se delimita el área: qué hace falta tener instalado. */
+function CircuitCard({ preset }: { preset: CircuitPreset }) {
+  const commit = useProjectStore((s) => s.commit);
+  const { requires } = preset;
+  return (
+    <div className="stack">
+      <img className="preset-preview" src={presetAssets(preset.id).preview} alt={`Trazado de ${preset.name}`} />
+      <p className="panel-text">
+        <strong>{preset.name}</strong> · {preset.description}
+      </p>
+      <p className="muted panel-text">
+        Delimita el área donde quieras dentro del circuito. Al exportar, la pista carga el circuito instalado en AC
+        (<code>content/tracks/{preset.acTrack}</code>) y los conos y líneas se apoyan en su suelo.
+        {' '}Requiere: {requires.url ? <a href={requires.url} target="_blank" rel="noreferrer">{requires.name}</a> : requires.name} ({requires.author}).
+        {requires.bundled && <> Está en el repositorio: <code>{requires.bundled}</code> (descomprímelo en <code>content/tracks</code>).</>}
+      </p>
+      <button className="btn btn-sm" onClick={() => commit(actions.clearPreset)}>
+        Pasar a mapa libre
+      </button>
+    </div>
+  );
+}
+
 function AreaPanel() {
   const scene = useScene();
   const { areaMode, set } = useEditorStore();
   const commit = useProjectStore((s) => s.commit);
+  const presetId = useProjectStore((s) => s.project.preset);
+  const preset = presetById(presetId);
+  if (preset?.kind === 'scene' && scene) return <PresetAreaPanel presetId={preset.id} />;
+  const circuit = preset?.kind === 'circuit' ? <CircuitCard preset={preset} /> : null;
   if (scene) {
     const xs = scene.area.map((p) => p.x);
     const ys = scene.area.map((p) => p.y);
     return (
       <div className="stack">
+        {circuit}
         <p className="muted panel-text">
           Área de {Math.round(Math.max(...xs) - Math.min(...xs))} × {Math.round(Math.max(...ys) - Math.min(...ys))} m. Las herramientas trabajan dentro de ella.
         </p>
@@ -64,7 +136,7 @@ function AreaPanel() {
           className="btn btn-danger"
           onClick={() =>
             window.confirm('Se borrará el área y todo lo que contiene (puedes deshacerlo con Ctrl+Z). ¿Continuar?') &&
-            commit((p) => ({ ...createEmptyProject(), name: p.name }))
+            commit((p) => ({ ...createEmptyProject(), name: p.name, preset: presetById(p.preset)?.kind === 'circuit' ? p.preset : null }))
           }
         >
           <TrashIcon size={16} /> Borrar área y empezar de nuevo
@@ -73,12 +145,15 @@ function AreaPanel() {
     );
   }
   return (
-    <Field label="Forma">
-      <div className="segmented">
-        <button aria-pressed={areaMode === 'polygon'} onClick={() => set({ areaMode: 'polygon' })}>Polígono</button>
-        <button aria-pressed={areaMode === 'rectangle'} onClick={() => set({ areaMode: 'rectangle' })}>Rectángulo</button>
-      </div>
-    </Field>
+    <div className="stack">
+      {circuit}
+      <Field label="Forma">
+        <div className="segmented">
+          <button aria-pressed={areaMode === 'polygon'} onClick={() => set({ areaMode: 'polygon' })}>Polígono</button>
+          <button aria-pressed={areaMode === 'rectangle'} onClick={() => set({ areaMode: 'rectangle' })}>Rectángulo</button>
+        </div>
+      </Field>
+    </div>
   );
 }
 
@@ -91,6 +166,7 @@ const TRACK_MODES: ReadonlyArray<{ id: TrackMode; label: string }> = [
 function TrackPanel() {
   const scene = useScene();
   const track = useProjectStore((s) => s.project.track);
+  const presetId = useProjectStore((s) => s.project.preset);
   const commit = useProjectStore((s) => s.commit);
   const { trackMode, set } = useEditorStore();
   const widths = track.anchors.map((a) => a.widthLeft + a.widthRight);
@@ -120,6 +196,11 @@ function TrackPanel() {
       {scene?.track && (
         <p className="muted panel-text">
           {Math.round(scene.track.length)} m · {track.anchors.length} puntos · {scene.autoCones.length} conos automáticos
+        </p>
+      )}
+      {presetId && (
+        <p className="muted panel-text">
+          Con un preset no se genera asfalto: se conduce sobre el suelo real del escenario 3D o del circuito y los conos marcan el trazado.
         </p>
       )}
       <div className="row">

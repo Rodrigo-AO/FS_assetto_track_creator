@@ -3,3 +3,9 @@ dist/
 *.log
 .vite/
 *.tsbuildinfo
+
+tools/presets/.venv/
+tools/presets/data/
+tools/presets/build/
+__pycache__/
+*.blend1

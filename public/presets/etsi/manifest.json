@@ -1,0 +1,10 @@
+{
+  "id": "etsi",
+  "kn5": "etsi.kn5",
+  "kn5Bytes": 29398921,
+  "zRef": 0.0,
+  "attribution": [
+    "Escenario modelado a mano a partir de Google Maps, Street View y la ortofoto PNOA (CC-BY 4.0 scne.es).",
+    "Texturas CC0 de Poly Haven (polyhaven.com)."
+  ]
+}

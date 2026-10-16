@@ -11,6 +11,7 @@ export const localToL = (scene: Scene, v: Vec2): LPoint => toL(scene.projection.
 
 /** Panes propios para ordenar las capas por encima de la imagen satélite. */
 export const PANES = {
+  circuit: 405,
   mask: 410,
   zones: 420,
   track: 430,

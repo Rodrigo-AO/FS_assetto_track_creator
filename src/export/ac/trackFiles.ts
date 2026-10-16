@@ -22,13 +22,15 @@ export interface UiTrackInfo {
   readonly lengthM: number;
   readonly widthM: number;
   readonly pitboxes: number;
+  /** Atribuciones de las fuentes del escenario (licencias CC-BY). */
+  readonly credits?: readonly string[];
 }
 
 export function uiTrackJson(info: UiTrackInfo): string {
   return JSON.stringify(
     {
       name: info.name,
-      description: 'Circuito creado con Assetto Track Creator.',
+      description: ['Circuito creado con Assetto Track Creator.', ...(info.credits ?? [])].join(' '),
       tags: ['circuit', 'formula student', 'cones', 'original'],
       geotags: [info.lat.toFixed(6), info.lng.toFixed(6)],
       country: '',

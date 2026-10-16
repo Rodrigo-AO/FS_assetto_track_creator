@@ -2,6 +2,8 @@ import { MapContainer, Pane, TileLayer, ZoomControl } from 'react-leaflet';
 import { useEditorStore } from '../../state/editorStore';
 import { useProjectStore } from '../../state/projectStore';
 import { AreaMaskLayer } from './layers/AreaMaskLayer';
+import { CircuitLayer } from './layers/CircuitLayer';
+import { CircuitLegend } from './CircuitLegend';
 import { ConesLayer } from './layers/ConesLayer';
 import { GatesLayer } from './layers/GatesLayer';
 import { SurfaceZonesLayer } from './layers/SurfaceZonesLayer';
@@ -49,6 +51,7 @@ export function MapView() {
         <ZoomControl position="bottomright" />
         <MapController />
 
+        <CircuitLayer />
         <AreaMaskLayer />
         {tool !== 'surface' && <SurfaceZonesLayer />}
         <TrackLayer />
@@ -62,6 +65,7 @@ export function MapView() {
         {tool === 'surface' && <SurfaceTool />}
         <SearchBox />
       </MapContainer>
+      <CircuitLegend />
     </div>
   );
 }

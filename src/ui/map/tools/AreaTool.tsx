@@ -1,3 +1,4 @@
+import { presetById } from '../../../domain/presets/presets';
 import { useCallback, useState } from 'react';
 import { Marker, Polygon, useMapEvents } from 'react-leaflet';
 import type { LatLng } from '../../../domain/geo/projection';
@@ -74,7 +75,9 @@ function AreaVertices({ area }: { area: readonly LatLng[] }) {
 
 export function AreaTool() {
   const area = useProjectStore((s) => s.project.area);
+  const preset = useProjectStore((s) => s.project.preset);
   const mode = useEditorStore((s) => s.areaMode);
+  if (area && presetById(preset)?.kind === 'scene') return null; // el área de un escenario 3D no se edita
   if (area) return <AreaVertices area={area} />;
   return mode === 'rectangle' ? <RectangleAreaDraft /> : <PolygonAreaDraft />;
 }

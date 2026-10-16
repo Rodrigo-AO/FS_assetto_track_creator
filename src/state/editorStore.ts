@@ -24,6 +24,10 @@ interface EditorState {
   exportOpen: boolean;
   /** Barra espaciadora pulsada: el arrastre mueve el mapa aunque la herramienta lo use. */
   spacePan: boolean;
+  /** Se incrementa para pedir al mapa que encuadre el área (p. ej. al elegir un preset). */
+  fitRequest: number;
+  /** Capa con las superficies del circuito de AC (asfalto, pianos, césped…) sobre el satélite. */
+  showCircuitLayer: boolean;
   toast: Toast | null;
   set: (patch: Partial<Omit<EditorState, 'set' | 'notify'>>) => void;
   notify: (text: string, kind?: Toast['kind']) => void;
@@ -40,6 +44,8 @@ export const useEditorStore = create<EditorState>()((set) => ({
   selectedZoneId: null,
   exportOpen: false,
   spacePan: false,
+  fitRequest: 0,
+  showCircuitLayer: true,
   toast: null,
   set: (patch) => set(patch),
   notify: (text, kind = 'info') => set({ toast: { id: Date.now(), text, kind } }),

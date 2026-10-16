@@ -1,0 +1,9 @@
+Texturas de Poly Haven (https://polyhaven.com), licencia CC0 1.0 (dominio público).
+- asphalt_02: https://polyhaven.com/a/asphalt_02
+- asphalt_track: https://polyhaven.com/a/asphalt_track
+- concrete_floor_worn_001: https://polyhaven.com/a/concrete_floor_worn_001
+- concrete_block_wall: https://polyhaven.com/a/concrete_block_wall
+- corrugated_iron_02: https://polyhaven.com/a/corrugated_iron_02
+- brick_pavement_02: https://polyhaven.com/a/brick_pavement_02
+- concrete_floor_painted: https://polyhaven.com/a/concrete_floor_painted
+- leafy_grass: https://polyhaven.com/a/leafy_grass

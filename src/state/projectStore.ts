@@ -41,7 +41,15 @@ export const useProjectStore = create<ProjectState>()(
       redo: () => set((s) => (s.future.length ? { project: s.future[0], future: s.future.slice(1), past: pushPast(s.past, s.project) } : s)),
       reset: (project = createEmptyProject()) => set({ project, past: [], future: [] }),
     }),
-    { name: 'atc.project.v1', partialize: (s) => ({ project: s.project }) },
+    {
+      name: 'atc.project.v1',
+      partialize: (s) => ({ project: s.project }),
+      // Borradores de versiones anteriores: completa los campos nuevos (p. ej. `preset`).
+      merge: (persisted, current) => ({
+        ...current,
+        project: { ...createEmptyProject(), ...((persisted as { project?: Partial<TrackProject> })?.project ?? {}) },
+      }),
+    },
   ),
 );
 

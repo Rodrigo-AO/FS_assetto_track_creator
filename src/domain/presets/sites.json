@@ -1,0 +1,294 @@
+[
+  {
+    "id": "isla_magica",
+    "name": "Parking Isla Mágica",
+    "description": "Explanada del aparcamiento de Isla Mágica (Sevilla), entre la calle del Lago y Juan Bautista Muñoz.",
+    "lampStyle": "street",
+    "polygon": [
+      [
+        37.409036,
+        -5.996211
+      ],
+      [
+        37.408742,
+        -5.996139
+      ],
+      [
+        37.408144,
+        -5.996661
+      ],
+      [
+        37.409404,
+        -5.998325
+      ],
+      [
+        37.409888,
+        -5.99873
+      ],
+      [
+        37.410468,
+        -5.998057
+      ]
+    ]
+  },
+  {
+    "id": "etsi",
+    "name": "Pistas ETSI",
+    "description": "Pistas deportivas de la Escuela Técnica Superior de Ingeniería (Sevilla): plaza, pista de fútbol sala y pista circular hundida.",
+    "lampStyle": "expo92",
+    "fence": {
+      "fromVertex": 2,
+      "toVertex": 9,
+      "height": 2.0
+    },
+    "polygon": [
+      [
+        37.411478,
+        -6.003695
+      ],
+      [
+        37.410562,
+        -6.002947
+      ],
+      [
+        37.4104,
+        -6.002665
+      ],
+      [
+        37.410284,
+        -6.002666
+      ],
+      [
+        37.410142,
+        -6.002525
+      ],
+      [
+        37.410114,
+        -6.002269
+      ],
+      [
+        37.410232,
+        -6.002067
+      ],
+      [
+        37.410399,
+        -6.002014
+      ],
+      [
+        37.410549,
+        -6.002096
+      ],
+      [
+        37.410635,
+        -6.002319
+      ],
+      [
+        37.411367,
+        -6.002889
+      ]
+    ]
+  },
+  {
+    "id": "montmelo",
+    "name": "Circuit de Barcelona-Catalunya",
+    "description": "Montmeló (Barcelona). Circuito oficial de Kunos incluido en Assetto Corsa, trazado GP.",
+    "kind": "circuit",
+    "acTrack": "ks_barcelona",
+    "layout": "layout_gp",
+    "requires": {
+      "name": "Barcelona",
+      "author": "Kunos Simulazioni (incluido en Assetto Corsa)",
+      "url": null
+    },
+    "osm": {
+      "ways": [
+        831804327
+      ]
+    },
+    "polygon": [
+      [
+        41.563779,
+        2.25352
+      ],
+      [
+        41.563998,
+        2.25253
+      ],
+      [
+        41.56457,
+        2.251841
+      ],
+      [
+        41.565321,
+        2.251592
+      ],
+      [
+        41.566245,
+        2.251805
+      ],
+      [
+        41.568322,
+        2.253445
+      ],
+      [
+        41.573917,
+        2.258536
+      ],
+      [
+        41.574784,
+        2.259884
+      ],
+      [
+        41.575057,
+        2.260522
+      ],
+      [
+        41.574624,
+        2.262576
+      ],
+      [
+        41.574337,
+        2.263243
+      ],
+      [
+        41.574002,
+        2.263807
+      ],
+      [
+        41.57361,
+        2.264125
+      ],
+      [
+        41.573148,
+        2.26423
+      ],
+      [
+        41.572687,
+        2.264093
+      ],
+      [
+        41.564573,
+        2.257294
+      ],
+      [
+        41.564249,
+        2.256718
+      ]
+    ],
+    "georef": {
+      "origin": [
+        41.569612,
+        2.257961
+      ],
+      "scale": 1.000438,
+      "rotationDeg": 0.6056,
+      "offset": [
+        -16.081,
+        -31.323
+      ]
+    }
+  },
+  {
+    "id": "hockenheim",
+    "name": "Hockenheimring",
+    "description": "Hockenheim (Alemania). Mod Hockenheimring Multi Layout, trazado GP.",
+    "kind": "circuit",
+    "acTrack": "t78_hockenheimring",
+    "layout": "gp",
+    "requires": {
+      "name": "Hockenheimring Multi Layout",
+      "author": "Tommy78 (subido a RaceDepartment por Lorenzo Bonder)",
+      "url": "https://www.racedepartment.com/downloads/hockenheimring-multi-layout.7223/",
+      "bundled": "resources/tracks/T78_Hockenheimring_AC_v12.zip"
+    },
+    "osm": {
+      "ways": [
+        15444543,
+        15446020,
+        117568830,
+        117568831,
+        117568832,
+        117568833,
+        117570493,
+        117570496,
+        117570499,
+        117570502,
+        117570503,
+        117570506,
+        117570507,
+        117570511,
+        117570513,
+        339948104,
+        446193573,
+        446193577,
+        1386056979
+      ]
+    },
+    "polygon": [
+      [
+        49.325162,
+        8.567994
+      ],
+      [
+        49.32533,
+        8.567205
+      ],
+      [
+        49.325821,
+        8.566555
+      ],
+      [
+        49.329669,
+        8.563636
+      ],
+      [
+        49.329935,
+        8.563571
+      ],
+      [
+        49.331406,
+        8.564609
+      ],
+      [
+        49.334161,
+        8.568629
+      ],
+      [
+        49.334259,
+        8.569199
+      ],
+      [
+        49.333013,
+        8.584278
+      ],
+      [
+        49.332786,
+        8.584857
+      ],
+      [
+        49.332344,
+        8.584985
+      ],
+      [
+        49.332,
+        8.58463
+      ],
+      [
+        49.325443,
+        8.569463
+      ]
+    ],
+    "georef": {
+      "origin": [
+        49.32843,
+        8.574974
+      ],
+      "scale": 0.995522,
+      "rotationDeg": 34.5682,
+      "offset": [
+        -630.562,
+        -109.273
+      ]
+    }
+  }
+]

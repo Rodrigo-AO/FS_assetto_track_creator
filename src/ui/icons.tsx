@@ -62,6 +62,13 @@ export const ExportIcon = icon(
 export const UndoIcon = icon(<path d="M9 14L4 9l5-5M4 9h10a6 6 0 010 12h-3" />);
 export const RedoIcon = icon(<path d="M15 14l5-5-5-5M20 9H10a6 6 0 000 12h3" />);
 export const ChevronLeftIcon = icon(<path d="M15 6l-6 6 6 6" />);
+export const ChevronDownIcon = icon(<path d="M6 9l6 6 6-6" />);
+export const MapPinIcon = icon(
+  <>
+    <path d="M12 21s-6-5.6-6-11a6 6 0 0112 0c0 5.4-6 11-6 11z" />
+    <circle cx="12" cy="10" r="2.2" />
+  </>,
+);
 export const ChevronRightIcon = icon(<path d="M9 6l6 6-6 6" />);
 export const BackIcon = icon(<path d="M19 12H5M11 6l-6 6 6 6" />);
 export const SearchIcon = icon(

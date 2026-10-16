@@ -1,0 +1,6 @@
+public/presets/**/*.kn5 filter=lfs diff=lfs merge=lfs -text
+presets/**/*.blend filter=lfs diff=lfs merge=lfs -text
+presets/**/*.png filter=lfs diff=lfs merge=lfs -text
+presets/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+public/presets/**/*.bin filter=lfs diff=lfs merge=lfs -text
+resources/**/*.zip filter=lfs diff=lfs merge=lfs -text

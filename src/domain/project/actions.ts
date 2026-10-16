@@ -2,9 +2,20 @@
  * Operaciones puras sobre el proyecto (proyecto → proyecto nuevo). La UI solo las encadena;
  * así toda la lógica de edición es testeable sin navegador.
  */
-import { LocalProjection, type LatLng } from '../geo/projection';
+import type { LatLng, Projection } from '../geo/projection';
 import { add, scale, sub, type Vec2 } from '../geometry/vec2';
-import { DEFAULT_TRACK_WIDTH, type ConeColor, type Gate, type SurfaceType, type TrackAnchor, type TrackLayout, type TrackProject } from './types';
+import type { PresetSite } from '../presets/presets';
+import { projectionFor } from './scene';
+import {
+  createEmptyProject,
+  DEFAULT_TRACK_WIDTH,
+  type ConeColor,
+  type Gate,
+  type SurfaceType,
+  type TrackAnchor,
+  type TrackLayout,
+  type TrackProject,
+} from './types';
 
 export const newId = (): string => crypto.randomUUID();
 
@@ -17,8 +28,8 @@ const withTrack = (p: TrackProject, track: Partial<TrackLayout>): TrackProject =
 const mapAnchor = (p: TrackProject, id: string, f: (a: TrackAnchor) => TrackAnchor): TrackProject =>
   withTrack(p, { anchors: p.track.anchors.map((a) => (a.id === id ? f(a) : a)) });
 
-function projectionOf(p: TrackProject): LocalProjection {
-  return LocalProjection.centeredOn(p.area ?? []);
+function projectionOf(p: TrackProject): Projection {
+  return projectionFor(p);
 }
 
 // --------------------------------------------------------------------------- general
@@ -26,6 +37,18 @@ function projectionOf(p: TrackProject): LocalProjection {
 export const setName = (p: TrackProject, name: string): TrackProject => ({ ...p, name });
 
 export const setArea = (p: TrackProject, area: readonly LatLng[]): TrackProject => ({ ...p, area });
+
+/**
+ * Escenario: fija el área a su polígono (el modelo 3D está hecho exactamente ahí).
+ * Circuito de AC: el área se delimita después sobre el circuito; se descarta la anterior.
+ */
+export function applyPreset(p: TrackProject, preset: PresetSite): TrackProject {
+  const name = p.name === createEmptyProject().name ? preset.name : p.name;
+  return { ...p, name, preset: preset.id, area: preset.kind === 'scene' ? preset.polygon : null };
+}
+
+/** Vuelve al mapa libre conservando el área como editable. */
+export const clearPreset = (p: TrackProject): TrackProject => ({ ...p, preset: null });
 
 export function moveAreaVertex(p: TrackProject, index: number, position: LatLng): TrackProject {
   return p.area ? { ...p, area: p.area.map((v, i) => (i === index ? position : v)) } : p;

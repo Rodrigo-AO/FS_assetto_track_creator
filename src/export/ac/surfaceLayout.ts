@@ -44,9 +44,10 @@ function cross3([a, b, c]: readonly Vec2[]): number {
  * y dos mallas coplanarias darían un resultado indefinido). Prioridad: pista > zonas
  * (la última dibujada gana) > suelo base.
  */
-export function layoutSurfaces(project: TrackProject, scene: Scene): SurfaceLayer[] {
+export function layoutSurfaces(project: TrackProject, scene: Scene, generateGround = true): SurfaceLayer[] {
   const area: MultiPolygon = [[scene.area]];
-  const track = scene.track ? intersection(trackRibbon(scene.track), area) : [];
+  // Con un escenario 3D (preset) el suelo ya existe: solo se generan las zonas dibujadas.
+  const track = generateGround && scene.track ? intersection(trackRibbon(scene.track), area) : [];
   const layers: SurfaceLayer[] = [];
   if (track.length) layers.push({ type: 'asphalt', role: 'track', area: track });
 
@@ -61,7 +62,7 @@ export function layoutSurfaces(project: TrackProject, scene: Scene): SurfaceLaye
   }
   for (const [type, parts] of zonesByType) layers.push({ type, role: 'zones', area: parts.flat() });
 
-  const base = difference(area, covered);
+  const base = generateGround ? difference(area, covered) : [];
   if (base.length) layers.push({ type: project.baseSurface, role: 'base', area: base });
   return layers;
 }

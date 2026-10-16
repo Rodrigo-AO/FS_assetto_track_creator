@@ -48,6 +48,8 @@ export interface TrackLayout {
 export interface TrackProject {
   readonly version: 1;
   readonly name: string;
+  /** Ubicación con escenario 3D (ver domain/presets); fija el área a su polígono. */
+  readonly preset: string | null;
   readonly area: readonly LatLng[] | null;
   readonly baseSurface: SurfaceType;
   readonly zones: readonly SurfaceZone[];
@@ -65,6 +67,7 @@ export function createEmptyProject(): TrackProject {
   return {
     version: 1,
     name: 'Nuevo circuito',
+    preset: null,
     area: null,
     baseSurface: 'asphalt',
     zones: [],

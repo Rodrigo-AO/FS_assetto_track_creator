@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react';
 import { useEditorStore, type ToolId } from '../../state/editorStore';
 import { AreaIcon, ChevronLeftIcon, ChevronRightIcon, ConeIcon, FlagIcon, SectorIcon, SurfaceIcon, TrackIcon } from '../icons';
+import { circuitPresetById } from '../../domain/presets/presets';
+import { useProjectStore } from '../../state/projectStore';
 import { useScene } from './sceneContext';
 
 interface ToolEntry {
@@ -24,6 +26,8 @@ export function Toolbar() {
   const collapsed = useEditorStore((s) => s.toolbarCollapsed);
   const setEditor = useEditorStore((s) => s.set);
   const hasArea = scene !== null;
+  // Sobre un circuito de AC no se genera suelo: solo conos, líneas y salida.
+  const onCircuit = circuitPresetById(useProjectStore((s) => s.project.preset)) !== null;
 
   return (
     <nav className={`toolbar ${collapsed ? 'toolbar-collapsed' : ''}`} aria-label="Herramientas">
@@ -35,14 +39,15 @@ export function Toolbar() {
         {collapsed ? <ChevronRightIcon size={16} /> : <><ChevronLeftIcon size={16} /> <span>Herramientas</span></>}
       </button>
       {TOOLS.map(({ id, label, Icon }) => {
-        const enabled = id === 'area' || hasArea;
+        const blocked = id === 'surface' && onCircuit;
+        const enabled = (id === 'area' || hasArea) && !blocked;
         return (
           <button
             key={id}
             className="toolbar-item"
             aria-pressed={tool === id}
             disabled={!enabled}
-            title={enabled ? label : `${label} — delimita primero un área`}
+            title={enabled ? label : blocked ? `${label} — no disponible sobre un circuito: se conduce sobre su propio suelo` : `${label} — delimita primero un área`}
             onClick={() => setEditor({ tool: tool === id ? null : id, selectedZoneId: null })}
           >
             <Icon size={20} />

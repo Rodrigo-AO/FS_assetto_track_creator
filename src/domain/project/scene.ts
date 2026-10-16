@@ -1,4 +1,5 @@
-import { LocalProjection, type LatLng } from '../geo/projection';
+import { GeoreferencedProjection, LocalProjection, type Projection } from '../geo/projection';
+import { circuitPresetById } from '../presets/presets';
 import type { Vec2 } from '../geometry/vec2';
 import { generateEdgeCones, type PlacedCone } from '../track/autoCones';
 import { buildTrackGeometry, type LocalAnchor, type TrackGeometry } from '../track/centerline';
@@ -15,7 +16,7 @@ export interface SceneSector {
  * mapa (para dibujar) como el exportador, de modo que lo que se ve es lo que se exporta.
  */
 export interface Scene {
-  readonly projection: LocalProjection;
+  readonly projection: Projection;
   readonly area: readonly Vec2[];
   readonly track: TrackGeometry | null;
   readonly cones: readonly PlacedCone[];
@@ -26,11 +27,11 @@ export interface Scene {
   readonly sectors: readonly SceneSector[];
 }
 
-export function toLocalGate(projection: LocalProjection, g: Gate): LocalGate {
+export function toLocalGate(projection: Projection, g: Gate): LocalGate {
   return { left: projection.toLocal(g.left), right: projection.toLocal(g.right) };
 }
 
-export function toLocalAnchor(projection: LocalProjection, a: TrackAnchor): LocalAnchor {
+export function toLocalAnchor(projection: Projection, a: TrackAnchor): LocalAnchor {
   return {
     position: projection.toLocal(a.position),
     handleIn: a.handleIn && projection.toLocal(a.handleIn),
@@ -40,13 +41,19 @@ export function toLocalAnchor(projection: LocalProjection, a: TrackAnchor): Loca
   };
 }
 
-export function projectionFor(area: readonly LatLng[]): LocalProjection {
-  return LocalProjection.centeredOn(area);
+/**
+ * Plano local del proyecto. Sobre un circuito de AC es el del propio circuito (georreferenciado);
+ * si no, el plano tangente centrado en el área.
+ */
+export function projectionFor(project: Pick<TrackProject, 'area' | 'preset'>): Projection {
+  const circuit = circuitPresetById(project.preset);
+  if (circuit) return new GeoreferencedProjection(circuit.georef);
+  return LocalProjection.centeredOn(project.area ?? []);
 }
 
 export function buildScene(project: TrackProject): Scene | null {
   if (!project.area || project.area.length < 3) return null;
-  const projection = projectionFor(project.area);
+  const projection = projectionFor(project);
   const track = buildTrackGeometry(
     project.track.anchors.map((a) => toLocalAnchor(projection, a)),
     project.track.closed,
