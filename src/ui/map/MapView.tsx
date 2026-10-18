@@ -7,6 +7,10 @@ import { CircuitLegend } from './CircuitLegend';
 import { ConesLayer } from './layers/ConesLayer';
 import { GatesLayer } from './layers/GatesLayer';
 import { SurfaceZonesLayer } from './layers/SurfaceZonesLayer';
+import { DirtLayer } from './layers/DirtLayer';
+import { ReliefStrokesLayer } from './layers/ReliefStrokesLayer';
+import { TopoLayer } from './layers/TopoLayer';
+import { BrushTool, ReliefTool } from './tools/BrushTool';
 import { TrackLayer } from './layers/TrackLayer';
 import { PANES, toL, type LPoint } from './leafletUtils';
 import { MapController } from './MapController';
@@ -23,6 +27,7 @@ const DEFAULT_ZOOM = 16;
 
 export function MapView() {
   const tool = useEditorStore((s) => s.tool);
+  const mapView = useEditorStore((s) => s.mapView);
   const area = useProjectStore((s) => s.project.area);
   const initialBounds = area && area.length >= 3 ? area.map(toL) : undefined;
 
@@ -39,21 +44,26 @@ export function MapView() {
         doubleClickZoom={false}
         attributionControl
       >
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution="Imágenes &copy; Esri, Maxar, Earthstar Geographics"
-          maxNativeZoom={19}
-          maxZoom={21}
-        />
+        {mapView === 'satellite' && (
+          <TileLayer
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            attribution="Imágenes &copy; Esri, Maxar, Earthstar Geographics"
+            maxNativeZoom={19}
+            maxZoom={21}
+          />
+        )}
         {Object.entries(PANES).map(([name, zIndex]) => (
           <Pane key={name} name={name} style={{ zIndex }} />
         ))}
         <ZoomControl position="bottomright" />
         <MapController />
 
+        {mapView === 'topo' && <TopoLayer />}
         <CircuitLayer />
         <AreaMaskLayer />
         {tool !== 'surface' && <SurfaceZonesLayer />}
+        <DirtLayer />
+        {mapView === 'satellite' && <ReliefStrokesLayer />}
         <TrackLayer />
         <GatesLayer />
         <ConesLayer />
@@ -63,6 +73,8 @@ export function MapView() {
         {tool === 'cones' && <ConeTool />}
         {(tool === 'startFinish' || tool === 'sectors') && <GateTool kind={tool} />}
         {tool === 'surface' && <SurfaceTool />}
+        {tool === 'brush' && <BrushTool />}
+        {tool === 'relief' && <ReliefTool />}
         <SearchBox />
       </MapContainer>
       <CircuitLegend />

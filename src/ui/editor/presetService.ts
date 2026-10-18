@@ -2,7 +2,7 @@ import type { CircuitEnvironment, CircuitModel, SurfaceRaster } from '../../doma
 import { LocalProjection, type LatLng } from '../../domain/geo/projection';
 import { presetAssets, type CircuitPreset, type PresetManifest } from '../../domain/presets/presets';
 import type { Scene } from '../../domain/project/scene';
-import { parseTerrain, type TerrainJson } from '../../domain/presets/terrain';
+import { parseTerrain, type TerrainGrid, type TerrainJson } from '../../domain/presets/terrain';
 import type { PresetEnvironment } from '../../export/trackPackage';
 
 async function getJson<T>(url: string): Promise<T> {
@@ -66,14 +66,25 @@ export async function loadCircuitEnvironment(c: CircuitPreset, scene: Scene): Pr
   const status = await getJson<CircuitStatusJson>(`/api/ac/circuit?${circuitQuery(c)}`);
   if (!status.acFound) throw new Error('No se encontró Assetto Corsa en este equipo (define ATC_AC_PATH al arrancar la app).');
   if (!status.installed || !status.models || status.surfacesIni === undefined) throw new Error(`Falta el circuito. ${requirementText(c)}`);
+  const terrain = await fetchCircuitTerrain(c, scene);
+  return { acTrack: c.acTrack, models: status.models, surfacesIni: status.surfacesIni, terrain, requirement: requirementText(c) };
+}
+
+/** Suelo del circuito instalado bajo el área (plano del circuito), calculado por el servidor local. */
+export async function fetchCircuitTerrain(c: CircuitPreset, scene: Scene, cell = TERRAIN_CELL_M): Promise<TerrainGrid> {
   const xs = scene.area.map((p) => p.x);
   const ys = scene.area.map((p) => p.y);
   const box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
   const terrain = await getJson<TerrainJson>(
     `/api/ac/circuit-terrain?${circuitQuery(c)}&x0=${box[0] - TERRAIN_MARGIN_M}&y0=${box[1] - TERRAIN_MARGIN_M}` +
-      `&x1=${box[2] + TERRAIN_MARGIN_M}&y1=${box[3] + TERRAIN_MARGIN_M}&cell=${TERRAIN_CELL_M}`,
+      `&x1=${box[2] + TERRAIN_MARGIN_M}&y1=${box[3] + TERRAIN_MARGIN_M}&cell=${cell}`,
   );
-  return { acTrack: c.acTrack, models: status.models, surfacesIni: status.surfacesIni, terrain: parseTerrain(terrain), requirement: requirementText(c) };
+  return parseTerrain(terrain);
+}
+
+/** Suelo de un escenario 3D (terrain.json del preset, en el plano del proyecto). */
+export async function fetchSceneTerrain(id: string): Promise<TerrainGrid> {
+  return parseTerrain(await getJson<TerrainJson>(presetAssets(id).terrain));
 }
 
 interface SurfaceMapJson {

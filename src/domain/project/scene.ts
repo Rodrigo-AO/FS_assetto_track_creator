@@ -5,6 +5,8 @@ import { generateEdgeCones, type PlacedCone } from '../track/autoCones';
 import { buildTrackGeometry, type LocalAnchor, type TrackGeometry } from '../track/centerline';
 import { alignGateToTrack, orderSectors, type LocalGate } from '../track/gates';
 import type { Gate, TrackAnchor, TrackProject } from './types';
+import type { LocalDirtStroke } from '../dirt/dirt';
+import type { LocalReliefStroke } from '../relief/relief';
 
 export interface SceneSector {
   readonly id: string;
@@ -20,6 +22,10 @@ export interface Scene {
   readonly area: readonly Vec2[];
   readonly track: TrackGeometry | null;
   readonly cones: readonly PlacedCone[];
+  /** Trazos del Brush en el plano local. */
+  readonly dirt: readonly LocalDirtStroke[];
+  /** Trazos del Desnivelador en el plano local. */
+  readonly relief: readonly LocalReliefStroke[];
   readonly autoCones: readonly PlacedCone[];
   /** Líneas orientadas en el sentido de la pista (si existe). */
   readonly startFinish: LocalGate | null;
@@ -67,6 +73,8 @@ export function buildScene(project: TrackProject): Scene | null {
     area: project.area.map((p) => projection.toLocal(p)),
     track,
     cones: project.cones.map((c) => ({ position: projection.toLocal(c.position), color: c.color })),
+    relief: (project.relief ?? []).map((r) => ({ direction: r.direction, radius: r.radius, points: r.points.map((p) => projection.toLocal(p)) })),
+    dirt: (project.dirt ?? []).map((d) => ({ material: d.material, radius: d.radius, points: d.points.map((p) => projection.toLocal(p)) })),
     autoCones,
     startFinish,
     sectors: orderSectors(track, startFinish, sectors, (s) => s.gate),

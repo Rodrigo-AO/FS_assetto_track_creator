@@ -8,8 +8,12 @@ import { gateCenter, gateForward, gateTrackPosition, type LocalGate } from '../.
 import { encodeDds } from '../binary/dds';
 import type { RgbaImage } from '../binary/image';
 import type { Kn5Material, Kn5Model, Kn5Node, Kn5Texture } from './kn5';
-import { appendBox, appendCone, appendDraped, appendGround, appendStripe, appendWall, FLAT_GROUND, MeshData, type Ground } from './meshes';
+import { appendBox, appendCone, appendDraped, appendGridDraped, appendGround, appendStripe, appendWall, FLAT_GROUND, MeshData, type Ground } from './meshes';
 import { layoutSurfaces } from './surfaceLayout';
+import { appendDirtDecal, appendDirtPhysics, dirtDecalImage } from './dirtMeshes';
+import { appendReliefPatch } from './reliefMeshes';
+import { rasterizeRelief, reliefAt, reliefTileHasData } from '../../domain/relief/relief';
+import { DIRT_MATERIALS, DIRT_SPECS, rasterizeDirt } from '../../domain/dirt/dirt';
 import { coneTexture, solidTexture, SURFACE_TILE_METERS, surfaceTexture } from './textures';
 
 export interface SatelliteTexture {
@@ -30,6 +34,9 @@ export interface SceneOptions {
    */
   readonly environment?: { readonly ground: Ground; readonly zones?: boolean } | null;
 }
+
+/** Lado de los triángulos del suelo propio donde hay desniveles (m). */
+const RELIEF_DRAPE_STEP_M = 0.5;
 
 /** Lado de las casillas en que se agrupan los conos en mallas (m). */
 const CONE_TILE_M = 25;
@@ -114,6 +121,16 @@ class MaterialLibrary {
     this.index.set(name, this.materials.length - 1);
     return this.materials.length - 1;
   }
+
+  /**
+   * Calca semitransparente sobre el suelo, como las manchas de los circuitos de Kunos: ksPerPixel
+   * con mezcla alfa (blend 1) y profundidad de solo lectura (depthMode 1).
+   */
+  decal(name: string, image: RgbaImage): number {
+    const index = this.diffuse(name, () => image, 0.02, CONE_LIGHT);
+    this.materials[index] = { ...this.materials[index], blend: 1, depthMode: 1 };
+    return index;
+  }
 }
 
 // --------------------------------------------------------------------------- escena
@@ -138,29 +155,69 @@ export function buildTrackModel(project: TrackProject, scene: Scene, options: Sc
   const lib = new MaterialLibrary();
   const children: Kn5Node[] = [];
   const env = options.environment ?? null;
-  const ground: Ground = env?.ground ?? FLAT_GROUND;
+  // Desnivelador: en mapa libre deforma el propio suelo (sube y baja); sobre un escenario o un
+  // circuito solo puede subir, con un parche encima de su suelo.
+  const relief = rasterizeRelief(scene.relief);
+  const base: Ground = env?.ground ?? FLAT_GROUND;
+  const ground: Ground = !relief.size ? base : env ? (p) => base(p) + Math.max(0, reliefAt(relief, p)) : (p) => reliefAt(relief, p);
+  const refine = relief.size ? { step: RELIEF_DRAPE_STEP_M, where: (p: Vec2) => reliefTileHasData(relief, p) } : undefined;
 
   const layers = env?.zones === false ? [] : layoutSurfaces(project, scene, env === null);
   for (const layer of layers) {
     const key = SURFACES[layer.type].physics.key;
     const useSatellite = layer.role === 'base' && options.satellite !== null;
     const mesh = new MeshData();
+    // Suelo propio plano salvo que haya desniveles: entonces sigue el desnivel, más fino donde lo hay.
+    const lay = (uv: (v: Vec2) => readonly [number, number], lift = 0): void =>
+      relief.size
+        ? appendGridDraped(mesh, layer.area, ground, lift, uv, refine)
+        : env
+          ? appendDraped(mesh, layer.area, ground, lift, uv)
+          : appendGround(mesh, layer.area, 0, uv);
     if (env) {
-      appendDraped(mesh, layer.area, ground, ZONE_LIFT_M, surfaceUv(layer.type));
+      lay(surfaceUv(layer.type), ZONE_LIFT_M);
       const material = lib.diffuse(`ATC_${layer.type.toUpperCase()}`, () => surfaceTexture(layer.type));
       children.push(...meshNodes(`1${key}_${layer.role.toUpperCase()}`, mesh, material, true));
     } else if (useSatellite) {
       const { min, max, image } = options.satellite!;
-      appendGround(mesh, layer.area, 0, (v) => [(v.x - min.x) / (max.x - min.x), (max.y - v.y) / (max.y - min.y)]);
+      lay((v) => [(v.x - min.x) / (max.x - min.x), (max.y - v.y) / (max.y - min.y)]);
       children.push(...meshNodes(`1${key}_BASE`, mesh, lib.diffuse('ATC_SATELLITE', () => image), true));
     } else {
-      appendGround(mesh, layer.area, 0, surfaceUv(layer.type));
+      lay(surfaceUv(layer.type));
       const material = lib.diffuse(`ATC_${layer.type.toUpperCase()}`, () => surfaceTexture(layer.type));
       children.push(...meshNodes(`1${key}_${layer.role.toUpperCase()}`, mesh, material, true));
     }
   }
 
+  if (env && relief.size) {
+    const surface = project.baseSurface;
+    const patch = new MeshData();
+    if (appendReliefPatch(patch, relief, base, surfaceUv(surface))) {
+      const material = lib.diffuse(`ATC_${surface.toUpperCase()}`, () => surfaceTexture(surface));
+      children.push(...meshNodes(`1${SURFACES[surface].physics.key}_RELIEF`, patch, material, true));
+    }
+  }
+
   const hiddenMaterial = lib.diffuse('ATC_WHITE', () => solidTexture([255, 255, 255]));
+
+  // Suciedad del Brush: calca visual por casilla y física invisible por nivel de densidad.
+  const dirtTiles = [...rasterizeDirt(scene.dirt).values()];
+  for (const material of DIRT_MATERIALS) {
+    const physics: [MeshData, MeshData, MeshData] = [new MeshData(), new MeshData(), new MeshData()];
+    let decals = 0;
+    for (const tile of dirtTiles.filter((t) => t.material === material)) {
+      const decal = new MeshData();
+      if (!appendDirtDecal(decal, tile, ground)) continue;
+      const name = `ATC_DIRT_${material.toUpperCase()}_${tile.ix}_${tile.iy}`;
+      const index = lib.decal(name, dirtDecalImage(tile));
+      decal.toKn5Meshes(index, { castShadows: false, renderable: true }).forEach((mesh, i) =>
+        children.push({ name: `DIRT_${material.toUpperCase()}_${decals}_${i}`, mesh, children: [] }),
+      );
+      decals++;
+      appendDirtPhysics(physics, tile, ground);
+    }
+    physics.forEach((mesh, level) => children.push(...meshNodes(`1${DIRT_SPECS[material].levels[level].key}`, mesh, hiddenMaterial, true, false)));
+  }
 
   // Conos en mallas por casillas de CONE_TILE_M, como trocea Kunos sus pistas: con una sola malla
   // de ~50 m por color, AC dejaba a veces de dibujar la azul (la sombra sí salía).

@@ -18,7 +18,7 @@ export function MapController() {
   const map = useMap();
   const scene = useScene();
   const { tool, trackMode, spacePan } = useEditorStore();
-  const dragDraws = tool === 'track' && trackMode !== 'points';
+  const dragDraws = (tool === 'track' && trackMode !== 'points') || tool === 'brush' || tool === 'relief';
 
   useEffect(() => {
     if (dragDraws && !spacePan) map.dragging.disable();

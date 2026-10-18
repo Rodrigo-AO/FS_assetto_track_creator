@@ -44,6 +44,18 @@ export const SurfaceIcon = icon(
     <path d="M3 13l9 5 9-5" />
   </>,
 );
+export const BrushIcon = icon(
+  <>
+    <path d="M14.5 4.5l5 5-7.5 7.5-5-5z" />
+    <path d="M7 12c-2.5 0-3.5 2-3.5 4 0 1.5-.5 2.5-1.5 3.5 3 .5 6.5 0 7.5-3" />
+  </>,
+);
+export const ReliefIcon = icon(
+  <>
+    <path d="M3 18l5-7 3 4 3-6 7 9z" />
+    <path d="M15.5 4v4M13.5 6h4" />
+  </>,
+);
 export const TrackIcon = icon(
   <>
     <path d="M4 18c0-6 4-6 6-10s6-4 8-1" />

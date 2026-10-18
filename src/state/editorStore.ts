@@ -1,8 +1,10 @@
 import { create } from 'zustand';
-import type { ConeColor, SurfaceType } from '../domain/project/types';
+import type { ConeColor, DirtMaterial, ReliefDirection, SurfaceType } from '../domain/project/types';
 
 export type Screen = 'menu' | 'editor';
-export type ToolId = 'area' | 'cones' | 'startFinish' | 'sectors' | 'surface' | 'track';
+export type ToolId = 'area' | 'cones' | 'startFinish' | 'sectors' | 'surface' | 'brush' | 'relief' | 'track';
+export type MapView = 'satellite' | 'topo';
+export type BrushMode = 'paint' | 'erase';
 export type AreaMode = 'polygon' | 'rectangle';
 export type TrackMode = 'points' | 'bezier' | 'freehand';
 
@@ -19,6 +21,15 @@ interface EditorState {
   areaMode: AreaMode;
   coneColor: ConeColor;
   surfaceBrush: SurfaceType;
+  /** Brush de suciedad: material, diámetro (m) y si pinta o borra. */
+  brushMaterial: DirtMaterial;
+  brushSize: number;
+  brushMode: BrushMode;
+  /** Desnivelador: sube o baja, y radio (m). */
+  reliefDirection: ReliefDirection;
+  reliefRadius: number;
+  /** Fondo del mapa: satélite (con la capa del circuito si la hay) o vista topográfica a color. */
+  mapView: MapView;
   trackMode: TrackMode;
   selectedZoneId: string | null;
   exportOpen: boolean;
@@ -40,6 +51,12 @@ export const useEditorStore = create<EditorState>()((set) => ({
   areaMode: 'polygon',
   coneColor: 'blue',
   surfaceBrush: 'grass',
+  brushMaterial: 'sand',
+  brushSize: 2,
+  brushMode: 'paint',
+  reliefDirection: 'raise',
+  reliefRadius: 2,
+  mapView: 'satellite',
   trackMode: 'points',
   selectedZoneId: null,
   exportOpen: false,

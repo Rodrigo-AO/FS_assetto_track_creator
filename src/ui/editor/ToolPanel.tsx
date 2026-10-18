@@ -1,5 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { presetAssets, presetById, type CircuitPreset } from '../../domain/presets/presets';
+import { DIRT_MATERIALS, DIRT_SPECS } from '../../domain/dirt/dirt';
+import { RELIEF_MIN_M, RELIEF_STEP_M } from '../../domain/relief/relief';
 import { parseTerrain, terrainRange, type TerrainJson } from '../../domain/presets/terrain';
 import { CONE_COLORS, CONE_SPECS } from '../../domain/cones/coneSpecs';
 import * as actions from '../../domain/project/actions';
@@ -329,6 +331,109 @@ function SurfacePanel() {
   );
 }
 
+/** Diámetros del Brush (m). */
+const BRUSH_MIN_M = 0.5;
+const BRUSH_MAX_M = 12;
+/** Radios del Desnivelador (m). */
+const RELIEF_MIN_RADIUS_M = 0.5;
+const RELIEF_MAX_RADIUS_M = 15;
+
+/** Alterna el fondo del mapa entre el satélite y la vista topográfica a color. */
+function MapViewToggle() {
+  const { mapView, set } = useEditorStore();
+  const topo = mapView === 'topo';
+  return (
+    <button className={`btn btn-sm ${topo ? 'btn-primary' : ''}`} aria-pressed={topo} onClick={() => set({ mapView: topo ? 'satellite' : 'topo' })}>
+      {topo ? 'Volver a la vista satélite' : 'Vista topográfica'}
+    </button>
+  );
+}
+
+function ReliefPanel() {
+  const { reliefDirection, reliefRadius, set } = useEditorStore();
+  const strokes = useProjectStore((s) => s.project.relief.length);
+  const onPreset = useProjectStore((s) => s.project.preset) !== null;
+  const commit = useProjectStore((s) => s.commit);
+  return (
+    <div className="stack">
+      <Field label="Desnivel">
+        <div className="segmented">
+          <button aria-pressed={reliefDirection === 'raise'} onClick={() => set({ reliefDirection: 'raise' })}>Positivo (subir)</button>
+          <button aria-pressed={reliefDirection === 'lower'} onClick={() => set({ reliefDirection: 'lower' })}>Negativo (bajar)</button>
+        </div>
+      </Field>
+      <Field label={`Radio: ${reliefRadius.toFixed(1)} m`}>
+        <input
+          className="range"
+          type="range"
+          min={RELIEF_MIN_RADIUS_M}
+          max={RELIEF_MAX_RADIUS_M}
+          step={0.5}
+          value={reliefRadius}
+          onChange={(e) => set({ reliefRadius: Number(e.target.value) })}
+          aria-label="Radio del Desnivelador (m)"
+        />
+      </Field>
+      <MapViewToggle />
+      <p className="muted panel-text">
+        Cada pasada sube o baja {RELIEF_STEP_M * 100} cm en el centro y se difumina hacia el borde; repasar acumula. Hacia abajo, como mucho{' '}
+        {Math.abs(RELIEF_MIN_M).toLocaleString('es-ES')} m; hacia arriba no hay límite. Conos, líneas y coches siguen el nuevo suelo.
+        {onPreset && ' En escenarios 3D y circuitos de AC solo se puede subir: lo que baje de su suelo se ignora.'}
+      </p>
+      <button className="btn btn-sm btn-danger" disabled={!strokes} onClick={() => commit(actions.clearRelief)}>
+        <TrashIcon size={14} /> Quitar todos los desniveles ({strokes})
+      </button>
+    </div>
+  );
+}
+
+function BrushPanel() {
+  const { brushMaterial, brushSize, brushMode, set } = useEditorStore();
+  const strokes = useProjectStore((s) => s.project.dirt.length);
+  const commit = useProjectStore((s) => s.commit);
+  const levels = DIRT_SPECS[brushMaterial].levels.map((l) => l.friction.toLocaleString('es-ES')).join(' / ');
+  return (
+    <div className="stack">
+      <Field label="Modo">
+        <div className="segmented">
+          <button aria-pressed={brushMode === 'paint'} onClick={() => set({ brushMode: 'paint' })}>Pintar</button>
+          <button aria-pressed={brushMode === 'erase'} onClick={() => set({ brushMode: 'erase' })}>Borrar</button>
+        </div>
+      </Field>
+      <Field label="Material">
+        <div className="segmented">
+          {DIRT_MATERIALS.map((m) => (
+            <button key={m} aria-pressed={brushMaterial === m} onClick={() => set({ brushMaterial: m })}>
+              <span className="swatch" style={{ background: DIRT_SPECS[m].mapColor }} />
+              {DIRT_SPECS[m].label}
+            </button>
+          ))}
+        </div>
+      </Field>
+      <Field label={`Tamaño: ${brushSize.toFixed(1)} m`}>
+        <input
+          className="range"
+          type="range"
+          min={BRUSH_MIN_M}
+          max={BRUSH_MAX_M}
+          step={0.5}
+          value={brushSize}
+          onChange={(e) => set({ brushSize: Number(e.target.value) })}
+          aria-label="Tamaño del Brush (m)"
+        />
+      </Field>
+      <p className="muted panel-text">
+        Cada pasada deja una ligera capa que se difumina hacia el borde; repasar la misma zona la ensucia más. En AC reduce el agarre
+        (fricción {levels} según lo cargada que esté, frente a {SURFACES.asphalt.physics.friction} del asfalto) y ensucia los neumáticos.
+      </p>
+      <MapViewToggle />
+      <button className="btn btn-sm btn-danger" disabled={!strokes} onClick={() => commit(actions.clearDirt)}>
+        <TrashIcon size={14} /> Quitar toda la suciedad ({strokes})
+      </button>
+    </div>
+  );
+}
+
 export function ToolPanel() {
   const tool = useEditorStore((s) => s.tool);
   const collapsed = useEditorStore((s) => s.toolbarCollapsed);
@@ -342,6 +447,8 @@ export function ToolPanel() {
     startFinish: <GatesPanel kind="startFinish" />,
     sectors: <GatesPanel kind="sectors" />,
     surface: <SurfacePanel />,
+    brush: <BrushPanel />,
+    relief: <ReliefPanel />,
   }[tool];
   return (
     <aside className={`tool-panel ${collapsed ? 'tool-panel-shifted' : ''}`}>

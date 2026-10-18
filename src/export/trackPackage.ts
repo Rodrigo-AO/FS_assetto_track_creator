@@ -95,6 +95,9 @@ export function exportWarnings(project: TrackProject, scene: Scene): string[] {
   if (scene.startFinish && offTrack(scene.startFinish)) warnings.push('La salida/meta no está sobre el trazado actual: vuelve a colocarla.');
   if (scene.sectors.some((s) => offTrack(s.gate))) warnings.push('Algún sector no está sobre el trazado actual.');
   if (project.sectors.length === 0) warnings.push('Sin sectores: AC mostrará solo el tiempo por vuelta.');
+  if (project.preset && project.relief.some((r) => r.direction === 'lower')) {
+    warnings.push('En escenarios 3D y circuitos de AC el Desnivelador solo puede subir el suelo: lo que baje del suelo original se ignora.');
+  }
   return warnings;
 }
 

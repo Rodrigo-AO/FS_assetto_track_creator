@@ -9,6 +9,30 @@ export interface Cone {
   readonly color: ConeColor;
 }
 
+/** Material que esparce el Brush sobre el circuito. */
+export type DirtMaterial = 'sand' | 'gravel';
+
+/** Pasada del Brush: suciedad difuminada a lo largo de un trazo (ver domain/dirt). */
+export interface DirtStroke {
+  readonly id: string;
+  readonly material: DirtMaterial;
+  /** Radio del pincel (m). */
+  readonly radius: number;
+  readonly points: readonly LatLng[];
+}
+
+/** Sentido del Desnivelador: sube o baja el suelo. */
+export type ReliefDirection = 'raise' | 'lower';
+
+/** Pasada del Desnivelador (ver domain/relief). */
+export interface ReliefStroke {
+  readonly id: string;
+  readonly direction: ReliefDirection;
+  /** Radio del pincel (m). */
+  readonly radius: number;
+  readonly points: readonly LatLng[];
+}
+
 export interface SurfaceZone {
   readonly id: string;
   readonly type: SurfaceType;
@@ -53,6 +77,10 @@ export interface TrackProject {
   readonly area: readonly LatLng[] | null;
   readonly baseSurface: SurfaceType;
   readonly zones: readonly SurfaceZone[];
+  /** Arena y grava pintadas con el Brush. */
+  readonly dirt: readonly DirtStroke[];
+  /** Desniveles pintados con el Desnivelador. */
+  readonly relief: readonly ReliefStroke[];
   readonly cones: readonly Cone[];
   readonly conesCollidable: boolean;
   readonly track: TrackLayout;
@@ -71,6 +99,8 @@ export function createEmptyProject(): TrackProject {
     area: null,
     baseSurface: 'asphalt',
     zones: [],
+    dirt: [],
+    relief: [],
     cones: [],
     conesCollidable: false,
     track: { anchors: [], closed: true, symmetric: true, autoCones: true, coneSpacing: DEFAULT_CONE_SPACING },

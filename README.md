@@ -17,7 +17,10 @@ Abre http://localhost:5173. Para instalar las pistas directamente en el juego, l
 2. **Track creator**: traza la pista por puntos, con la pluma Bézier o a mano alzada. Ancho de 3 m por defecto (simétrico o por lado, arrastrando los bordes discontinuos) y conos automáticos cada 5 m: azules a la izquierda y amarillos a la derecha.
 3. **Salida / Meta** (obligatoria) y **Sectores**: clic sobre la pista.
 4. **Conos** manuales (azul, amarillo, naranja, naranja grande), con o sin hitbox, y **Tipo de suelo** (asfalto, césped o grava).
-5. **Exportar** → *Instalar en Assetto Corsa* o *Descargar ZIP*.
+5. **Brush**: arrastra para esparcir una ligera capa de **arena** o **grava**, con el tamaño que elijas. Cada pasada se difumina hacia el borde y repasar ensucia más. En AC reduce el agarre en tres niveles según lo cargada que esté la zona y ensucia los neumáticos. En modo *Borrar* quita las pasadas que toque el pincel.
+6. **Desnivelador**: arrastra para subir (positivo) o bajar (negativo) el suelo con el radio que elijas. Cada pasada aporta ±10 cm en el centro, difuminados hacia el borde, y las pasadas se suman. Hacia abajo el límite es −0,5 m; hacia arriba no hay. En el mapa libre se deforma el propio suelo. En escenarios 3D y circuitos de AC solo se puede subir: se añade un parche sobre su suelo.
+7. **Vista topográfica** (botón en los ajustes del Brush y del Desnivelador): cambia el satélite por un mapa de alturas del área a color, con una barra de escala a la derecha.
+8. **Exportar** → *Instalar en Assetto Corsa* o *Descargar ZIP*.
 
 ## Presets con escenario 3D
 

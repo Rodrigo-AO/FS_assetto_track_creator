@@ -13,7 +13,8 @@ const OVERLAY_OPACITY = 0.5;
  */
 export function CircuitLayer() {
   const scene = useScene();
-  const show = useEditorStore((s) => s.showCircuitLayer);
+  // En la vista topográfica no se pinta: la altura ocupa el fondo del mapa.
+  const show = useEditorStore((s) => s.showCircuitLayer && s.mapView === 'satellite');
   const { surfaces } = useCircuitSurfaces();
   const check = useCircuitCheck();
   if (!surfaces) return null;

@@ -1,11 +1,13 @@
 import type { Vec2 } from '../../domain/geometry/vec2';
 import type { Scene } from '../../domain/project/scene';
 import { SURFACES, SURFACE_TYPES } from '../../domain/surfaces/surfaceTypes';
+import { DIRT_MATERIALS, DIRT_SPECS } from '../../domain/dirt/dirt';
 import { createImage, strokePolyline, type Rgba, type RgbaImage } from '../binary/image';
 
+/** Superficies de la app: suelos (asfalto, césped, grava) y los tres niveles de suciedad del Brush. */
 export function surfacesIni(): string {
-  return SURFACE_TYPES.map((type, i) => {
-    const p = SURFACES[type].physics;
+  const all = [...SURFACE_TYPES.map((type) => SURFACES[type].physics), ...DIRT_MATERIALS.flatMap((m) => DIRT_SPECS[m].levels)];
+  return all.map((p, i) => {
     return [
       `[SURFACE_${i}]`, `KEY=${p.key}`, `FRICTION=${p.friction}`, `DAMPING=${p.damping}`, `WAV=${p.wav}`, `WAV_PITCH=${p.wavPitch}`,
       `FF_EFFECT=${p.ffEffect}`, `DIRT_ADDITIVE=${p.dirtAdditive}`, `IS_VALID_TRACK=${p.isValidTrack}`, `BLACK_FLAG_TIME=${p.blackFlagTime}`,

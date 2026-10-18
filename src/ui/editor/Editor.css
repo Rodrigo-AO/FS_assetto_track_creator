@@ -639,3 +639,58 @@ p.notice {
     width: 210px;
   }
 }
+
+/* --------------------------------------------------------------- vista topográfica */
+
+.topo-legend {
+  position: absolute;
+  z-index: 1000;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--atc-border);
+  border-radius: var(--atc-radius);
+  background: var(--atc-white);
+  box-shadow: var(--atc-shadow);
+  font-size: 12px;
+}
+
+.topo-legend-title {
+  font-weight: 600;
+}
+
+.topo-legend-body {
+  display: flex;
+  gap: 8px;
+  height: 220px;
+}
+
+.topo-legend-bar {
+  width: 14px;
+  border-radius: 4px;
+}
+
+.topo-legend-ticks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.topo-image {
+  image-rendering: auto;
+}
+
+@media (max-width: 720px) {
+  .topo-legend-body {
+    height: 150px;
+  }
+}

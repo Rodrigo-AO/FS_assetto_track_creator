@@ -5,7 +5,7 @@ import { useScene } from './sceneContext';
 
 function useHint(): string | null {
   const scene = useScene();
-  const { tool, areaMode, trackMode } = useEditorStore();
+  const { tool, areaMode, trackMode, brushMode } = useEditorStore();
   const hasTrack = useProjectStore((s) => s.project.track.anchors.length >= 2);
   const preset = presetById(useProjectStore((s) => s.project.preset));
   switch (tool) {
@@ -31,6 +31,12 @@ function useHint(): string | null {
       return hasTrack
         ? 'Haz clic sobre la pista para colocar la línea perpendicular'
         : 'Haz clic en el extremo izquierdo y después en el derecho (según el sentido de la marcha)';
+    case 'brush':
+      return brushMode === 'erase'
+        ? 'Arrastra sobre la suciedad para quitar las pasadas que toque el pincel · mantén Espacio para mover el mapa'
+        : 'Arrastra para esparcir una ligera capa de arena o grava · repasa para ensuciar más · mantén Espacio para mover el mapa';
+    case 'relief':
+      return 'Arrastra para subir o bajar el suelo · cada pasada suma o resta 10 cm en el centro (mínimo −0,5 m) · mantén Espacio para mover el mapa';
     case 'surface':
       return 'Dibuja un polígono con el suelo elegido · doble clic o Enter para cerrar · clic en una zona para editarla';
     default:

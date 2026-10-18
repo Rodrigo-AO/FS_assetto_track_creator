@@ -1,5 +1,5 @@
 import type { ConeSpec } from '../../domain/cones/coneSpecs';
-import { triangulate, type MultiPolygon, type Ring } from '../../domain/geometry/polygon';
+import { intersection, pointInRing, triangulate, type MultiPolygon, type Ring } from '../../domain/geometry/polygon';
 import type { Vec2 } from '../../domain/geometry/vec2';
 import { KN5_MAX_VERTICES, type Kn5Mesh } from './kn5';
 
@@ -188,16 +188,34 @@ export function appendStripe(mesh: MeshData, from: Vec2, to: Vec2, width: number
   }
 }
 
-/** Suelo que sigue el relieve: triangula y subdivide hasta lados de ~1 m, a `lift` metros sobre el terreno. */
-export function appendDraped(mesh: MeshData, area: MultiPolygon, ground: Ground, lift: number, uvOf: (v: Vec2) => readonly [number, number]): void {
+/** Zonas donde el suelo se subdivide más fino (p. ej. donde hay desniveles pintados). */
+export interface DrapeRefinement {
+  readonly step: number;
+  readonly where: (p: Vec2) => boolean;
+}
+
+/**
+ * Suelo que sigue el relieve: triangula y subdivide hasta lados de ~1 m (o `refine.step` donde
+ * `refine.where`), a `lift` metros sobre el terreno.
+ */
+export function appendDraped(
+  mesh: MeshData,
+  area: MultiPolygon,
+  ground: Ground,
+  lift: number,
+  uvOf: (v: Vec2) => readonly [number, number],
+  refine?: DrapeRefinement,
+): void {
   const { vertices, indices } = triangulate(area);
   const tris: Array<[Vec2, Vec2, Vec2]> = [];
   for (let i = 0; i < indices.length; i += 3) tris.push([vertices[indices[i]], vertices[indices[i + 1]], vertices[indices[i + 2]]]);
   const mid = (a: Vec2, b: Vec2): Vec2 => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
   const edge = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
+  const limit = (a: Vec2, b: Vec2, c: Vec2): number =>
+    refine && (refine.where(a) || refine.where(b) || refine.where(c)) ? refine.step : DRAPE_STEP_M;
   while (tris.length) {
     const [a, b, c] = tris.pop()!;
-    if (Math.max(edge(a, b), edge(b, c), edge(c, a)) > DRAPE_STEP_M) {
+    if (Math.max(edge(a, b), edge(b, c), edge(c, a)) > limit(a, b, c)) {
       const ab = mid(a, b);
       const bc = mid(b, c);
       const ca = mid(c, a);
@@ -206,5 +224,86 @@ export function appendDraped(mesh: MeshData, area: MultiPolygon, ground: Ground,
     }
     const [i, j, k] = [a, b, c].map((v) => mesh.vertex(toAc(v, ground(v) + lift), UP, uvOf(v)));
     mesh.triangle(i, j, k, UP);
+  }
+}
+
+/** Celda gruesa de la malla en rejilla (m). */
+const GRID_COARSE_M = 2;
+
+function insideMultiPolygon(p: Vec2, mp: MultiPolygon): boolean {
+  return mp.some((poly) => pointInRing(p, poly[0]) && !poly.slice(1).some((hole) => pointInRing(p, hole)));
+}
+
+/**
+ * Suelo en rejilla regular con vértices compartidos (para el suelo con desniveles): celdas de 2 m,
+ * divididas en celdas de `refine.step` donde `refine.where` (en el centro de la celda gruesa). Las
+ * celdas que cruza el borde del polígono se recortan con él y se subdividen como `appendDraped`.
+ * A diferencia de subdividir la triangulación del polígono, no multiplica las astillas finas.
+ */
+export function appendGridDraped(
+  mesh: MeshData,
+  area: MultiPolygon,
+  ground: Ground,
+  lift: number,
+  uvOf: (v: Vec2) => readonly [number, number],
+  refine?: DrapeRefinement,
+): void {
+  const all = area.flatMap((poly) => poly.flat());
+  if (!all.length) return;
+  const x0 = Math.floor(Math.min(...all.map((p) => p.x)) / GRID_COARSE_M) * GRID_COARSE_M;
+  const y0 = Math.floor(Math.min(...all.map((p) => p.y)) / GRID_COARSE_M) * GRID_COARSE_M;
+  const nx = Math.ceil((Math.max(...all.map((p) => p.x)) - x0) / GRID_COARSE_M);
+  const ny = Math.ceil((Math.max(...all.map((p) => p.y)) - y0) / GRID_COARSE_M);
+
+  // Celdas gruesas que toca algún lado del polígono: esas se recortan; el resto, dentro o fuera.
+  const edgeCells = new Set<number>();
+  for (const poly of area) {
+    for (const ring of poly) {
+      ring.forEach((a, k) => {
+        const b = ring[(k + 1) % ring.length];
+        const steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / (GRID_COARSE_M / 16)));
+        for (let s = 0; s <= steps; s++) {
+          const x = a.x + ((b.x - a.x) * s) / steps;
+          const y = a.y + ((b.y - a.y) * s) / steps;
+          const ci = Math.floor((x - x0) / GRID_COARSE_M);
+          const cj = Math.floor((y - y0) / GRID_COARSE_M);
+          edgeCells.add(cj * (nx + 1) + ci);
+        }
+      });
+    }
+  }
+
+  const shared = new Map<string, number>();
+  const vertex = (p: Vec2): number => {
+    const key = `${Math.round(p.x * 1000)},${Math.round(p.y * 1000)}`;
+    let v = shared.get(key);
+    if (v === undefined) {
+      v = mesh.vertex(toAc(p, ground(p) + lift), UP, uvOf(p));
+      shared.set(key, v);
+    }
+    return v;
+  };
+  for (let cj = 0; cj < ny; cj++) {
+    for (let ci = 0; ci < nx; ci++) {
+      const cx = x0 + ci * GRID_COARSE_M;
+      const cy = y0 + cj * GRID_COARSE_M;
+      const center = { x: cx + GRID_COARSE_M / 2, y: cy + GRID_COARSE_M / 2 };
+      const fine = refine?.where(center) ?? false;
+      const step = fine ? refine!.step : GRID_COARSE_M;
+      if (edgeCells.has(cj * (nx + 1) + ci)) {
+        const cell: MultiPolygon = [[[{ x: cx, y: cy }, { x: cx + GRID_COARSE_M, y: cy }, { x: cx + GRID_COARSE_M, y: cy + GRID_COARSE_M }, { x: cx, y: cy + GRID_COARSE_M }]]];
+        const piece = intersection(cell, area);
+        if (piece.length) appendDraped(mesh, piece, ground, lift, uvOf, fine ? refine : undefined);
+        continue;
+      }
+      if (!insideMultiPolygon(center, area)) continue;
+      const n = Math.round(GRID_COARSE_M / step);
+      for (let j = 0; j < n; j++) {
+        for (let i = 0; i < n; i++) {
+          const q = (di: number, dj: number) => vertex({ x: cx + (i + di) * step, y: cy + (j + dj) * step });
+          mesh.quad(q(0, 0), q(1, 0), q(1, 1), q(0, 1), UP);
+        }
+      }
+    }
   }
 }

@@ -228,3 +228,8 @@ select {
   gap: 8px;
   align-items: center;
 }
+
+.range {
+  width: 100%;
+  accent-color: var(--atc-primary);
+}

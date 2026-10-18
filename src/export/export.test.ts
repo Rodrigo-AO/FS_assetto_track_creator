@@ -17,6 +17,9 @@ interface Kn5NodeInfo {
   /** Mallas: radio de la esfera envolvente y si se dibuja. */
   radius?: number;
   renderable?: boolean;
+  /** Mallas: altura (Y de AC) mínima y máxima de sus vértices. */
+  minY?: number;
+  maxY?: number;
 }
 
 /** Lector mínimo de kn5 para comprobar la estructura escrita (nombres, matrices de dummies y esferas). */
@@ -73,7 +76,15 @@ function readKn5Nodes(data: Uint8Array): Kn5NodeInfo[] {
       p += 64;
     } else {
       p += 3;
-      skip(44);
+      const count = i32();
+      entry.minY = Infinity;
+      entry.maxY = -Infinity;
+      for (let k = 0; k < count; k++) {
+        const y = view.getFloat32(p + k * 44 + 4, true);
+        entry.minY = Math.min(entry.minY, y);
+        entry.maxY = Math.max(entry.maxY, y);
+      }
+      p += count * 44;
       skip(2);
       p += 16 + 12;
       entry.radius = view.getFloat32(p, true);
@@ -155,6 +166,73 @@ describe('exportación a Assetto Corsa', () => {
     expect(coneMeshes.filter((n) => n.name.startsWith('CONES_BLUE_')).length).toBeGreaterThan(1);
     expect(Math.max(...coneMeshes.map((n) => n.radius!))).toBeLessThan(20);
     expect(Object.keys(unzipSync(zipTrackFiles(files, 'atc_test')))).toContain('atc_test/atc_test.kn5');
+  });
+
+  it('Desnivelador en mapa libre: el suelo propio sube y baja, y los conos lo siguen', () => {
+    // Óvalo: recta este en x = 30. Tres pasadas subiendo allí y diez bajando en la recta oeste.
+    const up = (id: string) => ({ id, direction: 'raise' as const, radius: 3, points: [ll(30, -20), ll(30, 20)] });
+    const down = (id: string) => ({ id, direction: 'lower' as const, radius: 3, points: [ll(-30, -20), ll(-30, 20)] });
+    const relief = [up('a'), up('b'), up('c'), ...Array.from({ length: 10 }, (_, i) => down(`d${i}`))];
+    const files = buildTrackFiles({ ...ovalProject(), relief }, { trackId: 'atc_test', perimeterWalls: false, satellite: null });
+    const nodes = readKn5Nodes(files['atc_test.kn5']);
+    const ground = nodes.filter((n) => /^1ROAD_(BASE|TRACK)_/.test(n.name));
+    expect(Math.max(...ground.map((n) => n.maxY!))).toBeCloseTo(0.3, 1);
+    expect(Math.min(...ground.map((n) => n.minY!))).toBeCloseTo(-0.5, 1); // nunca más de medio metro
+    const cones = nodes.filter((n) => n.name.startsWith('CONES_'));
+    expect(Math.min(...cones.map((n) => n.minY!))).toBeLessThan(-0.3);
+    expect(nodes.some((n) => n.name.includes('_RELIEF'))).toBe(false);
+  });
+
+  it('Desnivelador sobre un preset: parche solo donde sube y aviso de lo que baja', () => {
+    const relief = [
+      { id: 'u', direction: 'raise' as const, radius: 3, points: [ll(30, -20), ll(30, 20)] },
+      { id: 'd', direction: 'lower' as const, radius: 3, points: [ll(-30, -20), ll(-30, 20)] },
+    ];
+    const project = { ...ovalProject(), preset: 'etsi', relief };
+    const flat = parseTerrain({ ...rampTerrain(), heights: Buffer.from(new Int16Array(41 * 41).buffer).toString('base64') });
+    const files = buildTrackFiles(project, {
+      trackId: 'atc_test', perimeterWalls: false, satellite: null,
+      preset: { id: 'etsi', kn5: new Uint8Array([1]), terrain: flat, attribution: [] },
+    });
+    const patch = readKn5Nodes(files['atc_test.kn5']).filter((n) => n.name.startsWith('1ROAD_RELIEF'));
+    expect(patch.length).toBeGreaterThan(0);
+    expect(Math.min(...patch.map((n) => n.minY!))).toBeGreaterThan(0); // nunca por debajo del suelo
+    expect(Math.max(...patch.map((n) => n.maxY!))).toBeCloseTo(0.1, 1);
+    expect(exportWarnings(project, buildScene(project)!).some((w) => w.includes('Desnivelador'))).toBe(true);
+  });
+
+  it('Brush: calca visual y superficies físicas con menos agarre según las pasadas', () => {
+    // Una pasada de arena a lo largo de la recta este y dos de grava superpuestas en la oeste.
+    const sand = { id: 's', material: 'sand' as const, radius: 1.5, points: [ll(30, -20), ll(30, 20)] };
+    const gravel = (id: string) => ({ id, material: 'gravel' as const, radius: 1.5, points: [ll(-30, -20), ll(-30, 20)] });
+    const files = buildTrackFiles({ ...ovalProject(), dirt: [sand, gravel('g1'), gravel('g2')] }, { trackId: 'atc_test', perimeterWalls: false, satellite: null });
+    const nodes = readKn5Nodes(files['atc_test.kn5']);
+    const names = nodes.map((n) => n.name);
+    // Una pasada: solo el nivel ligero; dos pasadas: aparece el medio en el centro del trazo.
+    expect(names).toContain('1DIRTSA1_0');
+    expect(names).not.toContain('1DIRTSA2_0');
+    expect(names).toContain('1DIRTGV2_0');
+    expect(nodes.filter((n) => /^1DIRT/.test(n.name)).every((n) => n.renderable === false)).toBe(true);
+    expect(nodes.filter((n) => n.name.startsWith('DIRT_')).every((n) => n.renderable === true)).toBe(true);
+    expect(names.some((n) => n.startsWith('DIRT_SAND_'))).toBe(true);
+    const ini = new TextDecoder().decode(files['data/surfaces.ini']);
+    for (const key of ['DIRTSA1', 'DIRTSA3', 'DIRTGV1', 'DIRTGV3']) expect(ini).toContain(`KEY=${key}`);
+  });
+
+  it('cada malla física contiene una sola clave de superficie (AC las busca como subcadena)', () => {
+    // Con «ATCSAND1», AC encontraba también SAND y daba la malla por ambigua («CAN BE: ATCSAND1 SAND»).
+    const sand = { id: 's', material: 'sand' as const, radius: 1.5, points: [ll(30, -20), ll(30, 20)] };
+    const gravel = { id: 'g', material: 'gravel' as const, radius: 1.5, points: [ll(-30, -20), ll(-30, 20)] };
+    const relief = [{ id: 'r', direction: 'raise' as const, radius: 3, points: [ll(0, 40), ll(0, 60)] }];
+    const files = buildTrackFiles(
+      { ...ovalProject(), conesCollidable: true, dirt: [sand, sand, sand, sand, gravel, gravel, gravel, gravel], relief },
+      { trackId: 'atc_test', perimeterWalls: true, satellite: null },
+    );
+    const ini = new TextDecoder().decode(files['data/surfaces.ini']);
+    const keys = [...[...ini.matchAll(/KEY=(\S+)/g)].map((m) => m[1]), 'ROAD', 'GRASS', 'KERB', 'SAND', 'WALL'];
+    const physics = readKn5NodeNames(files['atc_test.kn5']).filter((n) => /^\d/.test(n));
+    expect(physics.length).toBeGreaterThan(5);
+    for (const name of physics) expect([name, [...new Set(keys.filter((k) => name.includes(k)))]]).toEqual([name, [expect.any(String)]]);
   });
 
   it('sobre un circuito: carga sus kn5 instalados con rutas relativas, después de la capa de la app', () => {

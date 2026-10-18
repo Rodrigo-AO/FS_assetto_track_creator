@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { useEditorStore, type ToolId } from '../../state/editorStore';
-import { AreaIcon, ChevronLeftIcon, ChevronRightIcon, ConeIcon, FlagIcon, SectorIcon, SurfaceIcon, TrackIcon } from '../icons';
+import { AreaIcon, ChevronLeftIcon, ChevronRightIcon, ConeIcon, FlagIcon, SectorIcon, SurfaceIcon, BrushIcon, ReliefIcon, TrackIcon } from '../icons';
 import { circuitPresetById } from '../../domain/presets/presets';
 import { useProjectStore } from '../../state/projectStore';
 import { useScene } from './sceneContext';
@@ -18,6 +18,8 @@ export const TOOLS: readonly ToolEntry[] = [
   { id: 'startFinish', label: 'Salida / Meta', Icon: FlagIcon },
   { id: 'sectors', label: 'Sectores', Icon: SectorIcon },
   { id: 'surface', label: 'Tipo de suelo', Icon: SurfaceIcon },
+  { id: 'brush', label: 'Brush', Icon: BrushIcon },
+  { id: 'relief', label: 'Desnivelador', Icon: ReliefIcon },
 ];
 
 export function Toolbar() {

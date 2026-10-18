@@ -10,6 +10,8 @@ import {
   createEmptyProject,
   DEFAULT_TRACK_WIDTH,
   type ConeColor,
+  type DirtMaterial,
+  type ReliefDirection,
   type Gate,
   type SurfaceType,
   type TrackAnchor,
@@ -89,6 +91,26 @@ export const setZoneType = (p: TrackProject, id: string, type: SurfaceType): Tra
 });
 
 export const removeZone = (p: TrackProject, id: string): TrackProject => ({ ...p, zones: p.zones.filter((z) => z.id !== id) });
+
+// --------------------------------------------------------------------------- Brush (suciedad)
+
+/** Añade una pasada del Brush (un solo punto vale: deja una mancha redonda). */
+export const addDirtStroke = (p: TrackProject, material: DirtMaterial, radius: number, points: readonly LatLng[]): TrackProject =>
+  points.length ? { ...p, dirt: [...p.dirt, { id: newId(), material, radius, points }] } : p;
+
+/** Quita las pasadas indicadas (goma del Brush). */
+export const removeDirtStrokes = (p: TrackProject, ids: ReadonlySet<string>): TrackProject =>
+  ids.size ? { ...p, dirt: p.dirt.filter((d) => !ids.has(d.id)) } : p;
+
+export const clearDirt = (p: TrackProject): TrackProject => ({ ...p, dirt: [] });
+
+// --------------------------------------------------------------------------- Desnivelador
+
+/** Añade una pasada del Desnivelador. */
+export const addReliefStroke = (p: TrackProject, direction: ReliefDirection, radius: number, points: readonly LatLng[]): TrackProject =>
+  points.length ? { ...p, relief: [...p.relief, { id: newId(), direction, radius, points }] } : p;
+
+export const clearRelief = (p: TrackProject): TrackProject => ({ ...p, relief: [] });
 
 export const setBaseSurface = (p: TrackProject, baseSurface: SurfaceType): TrackProject => ({ ...p, baseSurface });
 
