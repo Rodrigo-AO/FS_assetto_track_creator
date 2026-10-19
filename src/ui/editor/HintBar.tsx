@@ -34,9 +34,9 @@ function useHint(): string | null {
     case 'brush':
       return brushMode === 'erase'
         ? 'Arrastra sobre la suciedad para quitar las pasadas que toque el pincel · mantén Espacio para mover el mapa'
-        : 'Arrastra para esparcir una ligera capa de arena o grava · repasa para ensuciar más · mantén Espacio para mover el mapa';
+        : 'Arrastra para esparcir arena o grava: se va sumando mientras pasas, también al repasar sin soltar · mantén Espacio para mover el mapa';
     case 'relief':
-      return 'Arrastra para subir o bajar el suelo · cada pasada suma o resta 10 cm en el centro (mínimo −0,5 m) · mantén Espacio para mover el mapa';
+      return 'Arrastra para subir o bajar el suelo: se va sumando mientras pasas, entre −1 m y 5 m · mantén Espacio para mover el mapa';
     case 'surface':
       return 'Dibuja un polígono con el suelo elegido · doble clic o Enter para cerrar · clic en una zona para editarla';
     default:

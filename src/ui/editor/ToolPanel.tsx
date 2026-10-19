@@ -1,7 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { presetAssets, presetById, type CircuitPreset } from '../../domain/presets/presets';
+import { circuitPresetById, presetAssets, presetById, type CircuitPreset } from '../../domain/presets/presets';
 import { DIRT_MATERIALS, DIRT_SPECS } from '../../domain/dirt/dirt';
-import { RELIEF_MIN_M, RELIEF_STEP_M } from '../../domain/relief/relief';
+import { RELIEF_MAX_M, RELIEF_MIN_M, RELIEF_STEP_M } from '../../domain/relief/relief';
+import { BRUSH_CENTER } from '../../domain/strokes/strokeField';
 import { parseTerrain, terrainRange, type TerrainJson } from '../../domain/presets/terrain';
 import { CONE_COLORS, CONE_SPECS } from '../../domain/cones/coneSpecs';
 import * as actions from '../../domain/project/actions';
@@ -352,14 +353,14 @@ function MapViewToggle() {
 function ReliefPanel() {
   const { reliefDirection, reliefRadius, set } = useEditorStore();
   const strokes = useProjectStore((s) => s.project.relief.length);
-  const onPreset = useProjectStore((s) => s.project.preset) !== null;
+  const onCircuit = circuitPresetById(useProjectStore((s) => s.project.preset)) !== null;
   const commit = useProjectStore((s) => s.commit);
   return (
     <div className="stack">
       <Field label="Desnivel">
         <div className="segmented">
-          <button aria-pressed={reliefDirection === 'raise'} onClick={() => set({ reliefDirection: 'raise' })}>Positivo (subir)</button>
-          <button aria-pressed={reliefDirection === 'lower'} onClick={() => set({ reliefDirection: 'lower' })}>Negativo (bajar)</button>
+          <button aria-pressed={reliefDirection === 'raise'} onClick={() => set({ reliefDirection: 'raise' })}>Positivo</button>
+          <button aria-pressed={reliefDirection === 'lower'} onClick={() => set({ reliefDirection: 'lower' })}>Negativo</button>
         </div>
       </Field>
       <Field label={`Radio: ${reliefRadius.toFixed(1)} m`}>
@@ -376,9 +377,10 @@ function ReliefPanel() {
       </Field>
       <MapViewToggle />
       <p className="muted panel-text">
-        Cada pasada sube o baja {RELIEF_STEP_M * 100} cm en el centro y se difumina hacia el borde; repasar acumula. Hacia abajo, como mucho{' '}
-        {Math.abs(RELIEF_MIN_M).toLocaleString('es-ES')} m; hacia arriba no hay límite. Conos, líneas y coches siguen el nuevo suelo.
-        {onPreset && ' En escenarios 3D y circuitos de AC solo se puede subir: lo que baje de su suelo se ignora.'}
+        El desnivel se va sumando mientras pasas el pincel, también al repasar sin soltar: una pasada sube o baja{' '}
+        {(BRUSH_CENTER * RELIEF_STEP_M * 100).toLocaleString('es-ES')} cm en el centro y se difumina hacia el borde. Queda entre{' '}
+        −{Math.abs(RELIEF_MIN_M).toLocaleString('es-ES')} m y {RELIEF_MAX_M.toLocaleString('es-ES')} m. Conos, líneas y coches siguen el nuevo suelo.
+        {onCircuit && ' Sobre un circuito de AC solo se puede subir: lo que baje de su suelo se ignora.'}
       </p>
       <button className="btn btn-sm btn-danger" disabled={!strokes} onClick={() => commit(actions.clearRelief)}>
         <TrashIcon size={14} /> Quitar todos los desniveles ({strokes})
@@ -423,10 +425,9 @@ function BrushPanel() {
         />
       </Field>
       <p className="muted panel-text">
-        Cada pasada deja una ligera capa que se difumina hacia el borde; repasar la misma zona la ensucia más. En AC reduce el agarre
+        La suciedad se va sumando mientras pasas el pincel, difuminada hacia el borde; repasar (también sin soltar) ensucia más. En AC reduce el agarre
         (fricción {levels} según lo cargada que esté, frente a {SURFACES.asphalt.physics.friction} del asfalto) y ensucia los neumáticos.
       </p>
-      <MapViewToggle />
       <button className="btn btn-sm btn-danger" disabled={!strokes} onClick={() => commit(actions.clearDirt)}>
         <TrashIcon size={14} /> Quitar toda la suciedad ({strokes})
       </button>

@@ -17,10 +17,12 @@ Abre http://localhost:5173. Para instalar las pistas directamente en el juego, l
 2. **Track creator**: traza la pista por puntos, con la pluma Bézier o a mano alzada. Ancho de 3 m por defecto (simétrico o por lado, arrastrando los bordes discontinuos) y conos automáticos cada 5 m: azules a la izquierda y amarillos a la derecha.
 3. **Salida / Meta** (obligatoria) y **Sectores**: clic sobre la pista.
 4. **Conos** manuales (azul, amarillo, naranja, naranja grande), con o sin hitbox, y **Tipo de suelo** (asfalto, césped o grava).
-5. **Brush**: arrastra para esparcir una ligera capa de **arena** o **grava**, con el tamaño que elijas. Cada pasada se difumina hacia el borde y repasar ensucia más. En AC reduce el agarre en tres niveles según lo cargada que esté la zona y ensucia los neumáticos. En modo *Borrar* quita las pasadas que toque el pincel.
-6. **Desnivelador**: arrastra para subir (positivo) o bajar (negativo) el suelo con el radio que elijas. Cada pasada aporta ±10 cm en el centro, difuminados hacia el borde, y las pasadas se suman. Hacia abajo el límite es −0,5 m; hacia arriba no hay. En el mapa libre se deforma el propio suelo. En escenarios 3D y circuitos de AC solo se puede subir: se añade un parche sobre su suelo.
-7. **Vista topográfica** (botón en los ajustes del Brush y del Desnivelador): cambia el satélite por un mapa de alturas del área a color, con una barra de escala a la derecha.
+5. **Brush**: arrastra para esparcir **arena** o **grava**, con el tamaño que elijas. Funciona como el pincel de máscaras de Lightroom: lo pintado aparece mientras arrastras y repasar (también sin soltar) ensucia más. El pincel se difumina desde el centro, que deja el 75 % de una pasada completa. En AC reduce el agarre en tres niveles según lo cargada que esté la zona y ensucia los neumáticos. En modo *Borrar* quita las pasadas que toque el pincel.
+6. **Desnivelador** (*Positivo* / *Negativo*): sube o baja el suelo por donde arrastras, igual que el Brush. Una pasada deja ±7,5 cm en el centro y el desnivel queda entre −1 m y 5 m. En el mapa libre y en los escenarios 3D (Isla Mágica, ETSI) se deforma el propio suelo, conservando su textura. Sobre los circuitos de AC solo se puede subir: se añade un parche sobre su suelo, porque sus kn5 no se modifican.
+7. **Vista topográfica** (botón en los ajustes del Desnivelador): cambia el satélite por el desnivel a color, con escala fija: verde el suelo original, azul −1 m y rojo 5 m. Solo se ve con el Desnivelador activo.
 8. **Exportar** → *Instalar en Assetto Corsa* o *Descargar ZIP*.
+
+**Editar circuito** (menú principal): elige el .zip de un circuito exportado (el de *Descargar ZIP*, o la carpeta de la pista comprimida) y se abre de nuevo en el editor. La exportación guarda el proyecto en `atc/project.json`, con la firma de la app y la versión del formato. Un .zip que no sea un circuito de Assetto Track Creator da un error.
 
 ## Presets con escenario 3D
 

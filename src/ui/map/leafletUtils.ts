@@ -52,6 +52,14 @@ export function coneIcon(color: string, size: number): L.DivIcon {
 }
 
 /** Evita el menú contextual del navegador en los clics derechos sobre elementos del mapa. */
+/**
+ * ¿El evento empezó sobre un marcador (punto del trazado, tirador de curva o de ancho, cono)?
+ * Leaflet también pasa al mapa el pulsar y el clic de los marcadores; las herramientas que dibujan
+ * con el mapa deben ignorarlos o, al arrastrar un punto, dibujarían a la vez un trazo nuevo.
+ */
+export const startsOnMarker = (e: L.LeafletMouseEvent): boolean =>
+  (e.originalEvent.target as Element | null)?.closest?.('.leaflet-marker-icon') != null;
+
 export const stopContextMenu = (e: L.LeafletMouseEvent): void => {
   L.DomEvent.preventDefault(e.originalEvent);
 };

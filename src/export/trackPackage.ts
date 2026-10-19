@@ -3,16 +3,21 @@ import { pointInRing } from '../domain/geometry/polygon';
 import { nearestOnPolyline } from '../domain/geometry/polyline';
 import { buildScene, type Scene } from '../domain/project/scene';
 import { mergeSurfacesIni, type CircuitEnvironment } from '../domain/presets/circuit';
+import { circuitPresetById } from '../domain/presets/presets';
+import { rasterizeRelief } from '../domain/relief/relief';
 import { groundFromTerrain, type TerrainGrid } from '../domain/presets/terrain';
 import type { LocalGate } from '../domain/track/gates';
 import type { TrackProject } from '../domain/project/types';
 import { encodePng } from './binary/png';
 import { writeKn5 } from './ac/kn5';
+import { readKn5 } from './ac/kn5Reader';
+import { deformSceneGround } from './ac/sceneGround';
 import { mapAssets, surfacesIni, uiTrackJson } from './ac/trackFiles';
 import { buildTrackModel, type SatelliteTexture } from './ac/trackScene';
+import { PROJECT_FILE, projectFileJson } from './projectFile';
 
-/** Archivo que identifica la pista como creada por esta app (permite reeditarla y reinstalarla). */
-export const PROJECT_FILE = 'atc/project.json';
+export { PROJECT_FILE };
+
 export const PIT_COUNT = 4;
 
 /** Escenario 3D de un preset, ya descargado (public/presets/<id>/). */
@@ -95,10 +100,16 @@ export function exportWarnings(project: TrackProject, scene: Scene): string[] {
   if (scene.startFinish && offTrack(scene.startFinish)) warnings.push('La salida/meta no está sobre el trazado actual: vuelve a colocarla.');
   if (scene.sectors.some((s) => offTrack(s.gate))) warnings.push('Algún sector no está sobre el trazado actual.');
   if (project.sectors.length === 0) warnings.push('Sin sectores: AC mostrará solo el tiempo por vuelta.');
-  if (project.preset && project.relief.some((r) => r.direction === 'lower')) {
-    warnings.push('En escenarios 3D y circuitos de AC el Desnivelador solo puede subir el suelo: lo que baje del suelo original se ignora.');
+  if (circuitPresetById(project.preset) && project.relief.some((r) => r.direction === 'lower')) {
+    warnings.push('Sobre un circuito de AC el Desnivelador solo puede subir el suelo: lo que baje del suelo original se ignora.');
   }
   return warnings;
+}
+
+/** kn5 del escenario con el Desnivelador aplicado a su suelo (el original si no hay desniveles). */
+function presetKn5(kn5: Uint8Array, scene: Scene): Uint8Array {
+  if (!scene.relief.length) return kn5;
+  return writeKn5(deformSceneGround(readKn5(kn5), rasterizeRelief(scene.relief)));
 }
 
 /** Todos los archivos de la carpeta `content/tracks/<id>` (rutas relativas a esa carpeta). */
@@ -114,7 +125,8 @@ export function buildTrackFiles(project: TrackProject, options: ExportOptions): 
     pitCount: PIT_COUNT,
     perimeterWalls: options.perimeterWalls,
     satellite: terrain ? null : options.satellite,
-    environment: terrain ? { ground: groundFromTerrain(terrain), zones: circuit === null } : null,
+    // El suelo de un escenario es nuestro y se deforma; el de un circuito de AC, no.
+    environment: terrain ? { ground: groundFromTerrain(terrain), zones: circuit === null, deformsGround: circuit === null } : null,
   });
   const maps = mapAssets(scene);
   const widths = scene.track?.samples.map((m) => m.widthLeft + m.widthRight) ?? [0];
@@ -124,7 +136,7 @@ export function buildTrackFiles(project: TrackProject, options: ExportOptions): 
   const environmentFiles: TrackFiles = circuit
     ? { 'models.ini': text(modelsIni([trackKn5, ...circuit.models.map((m) => ({ ...m, file: `../${circuit.acTrack}/${m.file}` }))])) }
     : preset
-      ? { [presetKn5Name(preset.id)]: preset.kn5, 'models.ini': text(modelsIni([presetKn5Name(preset.id), trackKn5])) }
+      ? { [presetKn5Name(preset.id)]: presetKn5(preset.kn5, scene), 'models.ini': text(modelsIni([presetKn5Name(preset.id), trackKn5])) }
       : {};
   return {
     ...environmentFiles,
@@ -145,7 +157,8 @@ export function buildTrackFiles(project: TrackProject, options: ExportOptions): 
     ),
     'ui/outline.png': encodePng(maps.outline),
     'ui/preview.png': encodePng(maps.preview),
-    [PROJECT_FILE]: text(JSON.stringify(project, null, 2)),
+    // Identifica la pista como creada por esta app y permite reabrirla con «Editar circuito».
+    [PROJECT_FILE]: text(projectFileJson(project, options.trackId)),
   };
 }
 

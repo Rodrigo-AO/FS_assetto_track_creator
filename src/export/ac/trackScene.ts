@@ -32,7 +32,15 @@ export interface SceneOptions {
    * pista solo lleva entonces conos, líneas, muros y dummies apoyados en `ground`, más las zonas
    * dibujadas si `zones` no es false (sobre un circuito no se genera ningún suelo).
    */
-  readonly environment?: { readonly ground: Ground; readonly zones?: boolean } | null;
+  readonly environment?: {
+    readonly ground: Ground;
+    readonly zones?: boolean;
+    /**
+     * Escenario 3D: su suelo se deforma con el Desnivelador (`deformSceneGround`) y lo de la pista
+     * lo sigue, también hacia abajo. Si no (circuito de AC), el desnivel solo sube, con un parche.
+     */
+    readonly deformsGround?: boolean;
+  } | null;
 }
 
 /** Lado de los triángulos del suelo propio donde hay desniveles (m). */
@@ -155,11 +163,12 @@ export function buildTrackModel(project: TrackProject, scene: Scene, options: Sc
   const lib = new MaterialLibrary();
   const children: Kn5Node[] = [];
   const env = options.environment ?? null;
-  // Desnivelador: en mapa libre deforma el propio suelo (sube y baja); sobre un escenario o un
-  // circuito solo puede subir, con un parche encima de su suelo.
+  // Desnivelador: en mapa libre deforma el propio suelo y en un escenario el suyo (sube y baja);
+  // sobre un circuito de AC solo puede subir, con un parche encima de su suelo.
   const relief = rasterizeRelief(scene.relief);
   const base: Ground = env?.ground ?? FLAT_GROUND;
-  const ground: Ground = !relief.size ? base : env ? (p) => base(p) + Math.max(0, reliefAt(relief, p)) : (p) => reliefAt(relief, p);
+  const patchOnly = env !== null && !env.deformsGround;
+  const ground: Ground = !relief.size ? base : patchOnly ? (p) => base(p) + Math.max(0, reliefAt(relief, p)) : (p) => base(p) + reliefAt(relief, p);
   const refine = relief.size ? { step: RELIEF_DRAPE_STEP_M, where: (p: Vec2) => reliefTileHasData(relief, p) } : undefined;
 
   const layers = env?.zones === false ? [] : layoutSurfaces(project, scene, env === null);
@@ -189,7 +198,7 @@ export function buildTrackModel(project: TrackProject, scene: Scene, options: Sc
     }
   }
 
-  if (env && relief.size) {
+  if (patchOnly && relief.size) {
     const surface = project.baseSurface;
     const patch = new MeshData();
     if (appendReliefPatch(patch, relief, base, surfaceUv(surface))) {

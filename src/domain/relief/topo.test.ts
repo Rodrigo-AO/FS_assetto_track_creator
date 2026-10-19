@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LocalProjection } from '../geo/projection';
 import { vec } from '../geometry/vec2';
-import { TOPO_STOPS, topoColor, topoPixels, topoRaster } from './topo';
+import { TOPO_STOPS, TOPO_ZERO_T, topoColor, topoPixels, topoRaster, topoT } from './topo';
 
 const projection = new LocalProjection({ lat: 37.4, lng: -6 });
 const square = [vec(-20, -10), vec(20, -10), vec(20, 10), vec(-20, 10)];
@@ -13,17 +13,14 @@ describe('vista topográfica', () => {
     const raster = topoRaster(area, projection, square, (p) => (p.x + 20) / 10, 200);
     expect(raster.width).toBe(200);
     expect(raster.height).toBeCloseTo(100, -1);
-    expect(raster.min).toBeCloseTo(0, 1);
-    expect(raster.max).toBeCloseTo(4, 1);
     const row = Math.floor(raster.height / 2) * raster.width;
     expect(raster.heights[row]).toBeLessThan(raster.heights[row + raster.width - 1]);
   });
 
-  it('deja fuera del área sin dato y no estira la escala en un área plana', () => {
+  it('deja fuera del área sin dato (transparente)', () => {
     const triangle = [vec(-20, -10), vec(20, -10), vec(-20, 10)];
     const raster = topoRaster(triangle.map((p) => projection.toLatLng(p)), projection, triangle, () => 0.3, 100);
     expect(Number.isNaN(raster.heights[raster.width - 1])).toBe(true); // esquina noreste, fuera
-    expect(raster.max - raster.min).toBeCloseTo(0.1, 5);
     const px = topoPixels(raster);
     expect(px[(raster.width - 1) * 4 + 3]).toBe(0);
   });
@@ -32,6 +29,18 @@ describe('vista topográfica', () => {
     expect(topoColor(0)).toEqual([...TOPO_STOPS[0][1]]);
     expect(topoColor(1)).toEqual([...TOPO_STOPS[TOPO_STOPS.length - 1][1]]);
     expect(topoColor(-5)).toEqual(topoColor(0));
-    expect(topoColor(0.4)).toEqual([...TOPO_STOPS[2][1]]);
+    expect(topoColor(TOPO_ZERO_T)).toEqual([...TOPO_STOPS[2][1]]);
+  });
+
+  it('escala fija: azul en −1 m, verde en el suelo original y rojo en 5 m', () => {
+    expect(topoT(-1)).toBe(0);
+    expect(topoT(-3)).toBe(0);
+    expect(topoT(0)).toBeCloseTo(TOPO_ZERO_T, 9);
+    expect(topoT(5)).toBe(1);
+    expect(topoT(8)).toBe(1);
+    // Monótona y con los pocos centímetros bien visibles.
+    const hs = [-1, -0.5, -0.1, 0, 0.075, 0.5, 2, 5];
+    hs.slice(1).forEach((h, i) => expect(topoT(h)).toBeGreaterThan(topoT(hs[i])));
+    expect(topoT(0.075) - TOPO_ZERO_T).toBeGreaterThan(0.05);
   });
 });

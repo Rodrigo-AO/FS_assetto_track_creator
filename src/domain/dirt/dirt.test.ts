@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addDirtStroke, clearDirt, removeDirtStrokes } from '../project/actions';
 import { createEmptyProject } from '../project/types';
 import { vec } from '../geometry/vec2';
+import { BRUSH_CENTER } from '../strokes/strokeField';
 import { BRUSH_STRENGTH, DIRT_SPECS, dirtAt, dirtLevel, rasterizeDirt, strokeTouches, type LocalDirtStroke } from './dirt';
 
 const line = (y: number, material: LocalDirtStroke['material'] = 'sand', radius = 1): LocalDirtStroke => ({
@@ -10,39 +11,45 @@ const line = (y: number, material: LocalDirtStroke['material'] = 'sand', radius 
   points: [vec(0, y), vec(10, y)],
 });
 
+/** Densidad de una pasada recta en su eje (el pincel deja el 75 % en el centro). */
+const ONE = 1 - (1 - BRUSH_STRENGTH) ** BRUSH_CENTER;
+
 describe('Brush: suciedad difuminada', () => {
   it('deja una ligera cantidad en el eje que se difumina hasta cero en el borde', () => {
     const tiles = rasterizeDirt([line(0)]);
-    expect(dirtAt(tiles, 'sand', vec(5, 0))).toBeCloseTo(BRUSH_STRENGTH, 2);
+    expect(dirtAt(tiles, 'sand', vec(5, 0))).toBeCloseTo(ONE, 2);
     const mid = dirtAt(tiles, 'sand', vec(5, 0.7));
     expect(mid).toBeGreaterThan(0);
-    expect(mid).toBeLessThan(BRUSH_STRENGTH);
+    expect(mid).toBeLessThan(ONE);
     expect(dirtAt(tiles, 'sand', vec(5, 1.1))).toBe(0);
     expect(dirtAt(tiles, 'gravel', vec(5, 0))).toBe(0);
   });
 
-  it('acumula las pasadas superpuestas sin pasar de 1 y un trazo no se suma consigo mismo', () => {
+  it('acumula las pasadas superpuestas sin pasar de 1, también al repasar sin soltar', () => {
     const one = dirtAt(rasterizeDirt([line(0)]), 'sand', vec(5, 0));
     const two = dirtAt(rasterizeDirt([line(0), line(0)]), 'sand', vec(5, 0));
     expect(two).toBeCloseTo(1 - (1 - one) ** 2, 4);
     const many = dirtAt(rasterizeDirt(Array.from({ length: 30 }, () => line(0))), 'sand', vec(5, 0));
     expect(many).toBeLessThanOrEqual(1);
-    // Ida y vuelta en el mismo trazo: igual que una pasada.
+    // Ida y vuelta en el mismo trazo, como el pincel de Lightroom: igual que dos pasadas.
     const zigzag = rasterizeDirt([{ material: 'sand', radius: 1, points: [vec(0, 0), vec(10, 0), vec(0, 0)] }]);
-    expect(dirtAt(zigzag, 'sand', vec(5, 0))).toBeCloseTo(one, 4);
+    expect(dirtAt(zigzag, 'sand', vec(5, 0))).toBeCloseTo(two, 2);
+    // Un clic sin arrastrar deja la fuerza de una pasada en su centro.
+    const dot = rasterizeDirt([{ material: 'sand', radius: 1, points: [vec(3, 3)] }]);
+    expect(dirtAt(dot, 'sand', vec(3.01, 3.01))).toBeCloseTo(ONE, 2);
   });
 
   it('cruza casillas sin cortes y admite coordenadas negativas', () => {
     const tiles = rasterizeDirt([{ material: 'gravel', radius: 2, points: [vec(-40, -3), vec(40, -3)] }]);
     expect(tiles.size).toBeGreaterThanOrEqual(3);
-    for (const x of [-31.9, -0.05, 0.05, 31.95, 32.05]) expect(dirtAt(tiles, 'gravel', vec(x, -3))).toBeCloseTo(BRUSH_STRENGTH, 2);
+    for (const x of [-31.9, -0.05, 0.05, 31.95, 32.05]) expect(dirtAt(tiles, 'gravel', vec(x, -3))).toBeCloseTo(ONE, 2);
   });
 
   it('pasa de densidad a nivel de agarre: una pasada ligera, varias más fuertes', () => {
     expect(dirtLevel(0)).toBe(0);
-    expect(dirtLevel(BRUSH_STRENGTH)).toBe(1);
-    expect(dirtLevel(1 - (1 - BRUSH_STRENGTH) ** 2)).toBe(2);
-    expect(dirtLevel(1 - (1 - BRUSH_STRENGTH) ** 4)).toBe(3);
+    expect(dirtLevel(ONE)).toBe(1);
+    expect(dirtLevel(1 - (1 - ONE) ** 2)).toBe(2);
+    expect(dirtLevel(1 - (1 - ONE) ** 5)).toBe(3);
     for (const spec of Object.values(DIRT_SPECS)) {
       const f = spec.levels.map((l) => l.friction);
       expect(f[0]).toBeLessThan(0.98); // menos agarre que el asfalto

@@ -1,5 +1,5 @@
 import { ImageOverlay, Polyline } from 'react-leaflet';
-import { useEditorStore } from '../../../state/editorStore';
+import { selectTopo, useEditorStore } from '../../../state/editorStore';
 import { useScene } from '../../editor/sceneContext';
 import { useCircuitCheck, useCircuitSurfaces } from '../../editor/useCircuitSurfaces';
 import { localToL, toL, type LPoint } from '../leafletUtils';
@@ -14,7 +14,7 @@ const OVERLAY_OPACITY = 0.5;
 export function CircuitLayer() {
   const scene = useScene();
   // En la vista topográfica no se pinta: la altura ocupa el fondo del mapa.
-  const show = useEditorStore((s) => s.showCircuitLayer && s.mapView === 'satellite');
+  const show = useEditorStore((s) => s.showCircuitLayer && !selectTopo(s));
   const { surfaces } = useCircuitSurfaces();
   const check = useCircuitCheck();
   if (!surfaces) return null;

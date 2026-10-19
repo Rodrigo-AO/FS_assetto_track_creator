@@ -1,7 +1,7 @@
 {
   "name": "assetto-track-creator",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "Editor de circuitos sobre mapa satélite que exporta pistas jugables para Assetto Corsa.",
   "scripts": {

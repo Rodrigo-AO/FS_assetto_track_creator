@@ -1,5 +1,6 @@
 import { MapContainer, Pane, TileLayer, ZoomControl } from 'react-leaflet';
-import { useEditorStore } from '../../state/editorStore';
+import { widenRenderers } from './zoomRepair';
+import { selectTopo, useEditorStore } from '../../state/editorStore';
 import { useProjectStore } from '../../state/projectStore';
 import { AreaMaskLayer } from './layers/AreaMaskLayer';
 import { CircuitLayer } from './layers/CircuitLayer';
@@ -27,13 +28,15 @@ const DEFAULT_ZOOM = 16;
 
 export function MapView() {
   const tool = useEditorStore((s) => s.tool);
-  const mapView = useEditorStore((s) => s.mapView);
+  // La vista topográfica solo se ve con el Desnivelador (su botón está en ese panel).
+  const topo = useEditorStore(selectTopo);
   const area = useProjectStore((s) => s.project.area);
   const initialBounds = area && area.length >= 3 ? area.map(toL) : undefined;
 
   return (
     <div className="map-wrap">
       <MapContainer
+        ref={(map) => map && widenRenderers(map)}
         className="map"
         center={initialBounds ? undefined : DEFAULT_CENTER}
         zoom={initialBounds ? undefined : DEFAULT_ZOOM}
@@ -44,7 +47,7 @@ export function MapView() {
         doubleClickZoom={false}
         attributionControl
       >
-        {mapView === 'satellite' && (
+        {!topo && (
           <TileLayer
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
             attribution="Imágenes &copy; Esri, Maxar, Earthstar Geographics"
@@ -58,12 +61,12 @@ export function MapView() {
         <ZoomControl position="bottomright" />
         <MapController />
 
-        {mapView === 'topo' && <TopoLayer />}
+        {topo && <TopoLayer />}
         <CircuitLayer />
         <AreaMaskLayer />
         {tool !== 'surface' && <SurfaceZonesLayer />}
         <DirtLayer />
-        {mapView === 'satellite' && <ReliefStrokesLayer />}
+        {!topo && <ReliefStrokesLayer />}
         <TrackLayer />
         <GatesLayer />
         <ConesLayer />

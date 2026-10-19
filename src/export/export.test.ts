@@ -7,7 +7,39 @@ import { encodePng } from './binary/png';
 import { parseTerrain } from '../domain/presets/terrain';
 import { buildTrackFiles, exportWarnings, presetKn5Name, PROJECT_FILE, trackIdFromName, validateForExport, zipTrackFiles } from './trackPackage';
 import { buildScene } from '../domain/project/scene';
-import { boundingSphere, writeKn5, type Kn5Mesh } from './ac/kn5';
+import { readFileSync } from 'node:fs';
+import { boundingSphere, writeKn5, type Kn5Mesh, type Kn5Node } from './ac/kn5';
+import { readKn5 } from './ac/kn5Reader';
+import { buildTrackModel } from './ac/trackScene';
+
+const flattenNodes = (node: Kn5Node): Kn5Node[] => [node, ...node.children.flatMap(flattenNodes)];
+
+/** Escenario mínimo como los de la tubería de presets: suelo de 200 m con textura y un muro. */
+function fakeSceneKn5(): Uint8Array {
+  const corners = [[-100, -100], [100, -100], [100, 100], [-100, 100]];
+  const ground: Kn5Mesh = {
+    positions: Float32Array.from(corners.flatMap(([x, z]) => [x, 0, z])),
+    normals: Float32Array.from(corners.flatMap(() => [0, 1, 0])),
+    uvs: Float32Array.from(corners.flatMap(([x, z]) => [(x + 100) / 200, (z + 100) / 200])),
+    tangents: Float32Array.from(corners.flatMap(() => [1, 0, 0])),
+    indices: Uint16Array.from([0, 2, 1, 0, 3, 2]),
+    material: 0, castShadows: false, renderable: true,
+  };
+  const wall: Kn5Mesh = {
+    positions: Float32Array.from([50, 0, 50, 60, 0, 50, 60, 2, 50]),
+    normals: Float32Array.from([0, 0, 1, 0, 0, 1, 0, 0, 1]),
+    uvs: new Float32Array(6), tangents: new Float32Array(9),
+    indices: Uint16Array.from([0, 1, 2]), material: 0, castShadows: true, renderable: true,
+  };
+  return writeKn5({
+    textures: [{ name: 'parking.dds', data: new Uint8Array([1, 2, 3, 4]) }],
+    materials: [{ name: 'ATC_PARKING', shader: 'ksPerPixel', properties: [{ name: 'ksDiffuse', a: 0.4 }], textures: [['txDiffuse', 0, 'parking.dds']] }],
+    root: { name: 'ATC_SCENE', children: [
+      { name: '1ROAD_PARKING_0', mesh: ground, children: [] },
+      { name: '1WALL_BASE_0', mesh: wall, children: [] },
+    ] },
+  });
+}
 
 const readKn5NodeNames = (data: Uint8Array): string[] => readKn5Nodes(data).map((n) => n.name);
 
@@ -169,46 +201,96 @@ describe('exportación a Assetto Corsa', () => {
   });
 
   it('Desnivelador en mapa libre: el suelo propio sube y baja, y los conos lo siguen', () => {
-    // Óvalo: recta este en x = 30. Tres pasadas subiendo allí y diez bajando en la recta oeste.
+    // Óvalo: recta este en x = 30. Tres pasadas subiendo allí (7,5 cm cada una) y quince bajando en la oeste.
     const up = (id: string) => ({ id, direction: 'raise' as const, radius: 3, points: [ll(30, -20), ll(30, 20)] });
     const down = (id: string) => ({ id, direction: 'lower' as const, radius: 3, points: [ll(-30, -20), ll(-30, 20)] });
-    const relief = [up('a'), up('b'), up('c'), ...Array.from({ length: 10 }, (_, i) => down(`d${i}`))];
+    const relief = [up('a'), up('b'), up('c'), ...Array.from({ length: 15 }, (_, i) => down(`d${i}`))];
     const files = buildTrackFiles({ ...ovalProject(), relief }, { trackId: 'atc_test', perimeterWalls: false, satellite: null });
     const nodes = readKn5Nodes(files['atc_test.kn5']);
     const ground = nodes.filter((n) => /^1ROAD_(BASE|TRACK)_/.test(n.name));
-    expect(Math.max(...ground.map((n) => n.maxY!))).toBeCloseTo(0.3, 1);
-    expect(Math.min(...ground.map((n) => n.minY!))).toBeCloseTo(-0.5, 1); // nunca más de medio metro
+    expect(Math.max(...ground.map((n) => n.maxY!))).toBeCloseTo(0.225, 1);
+    expect(Math.min(...ground.map((n) => n.minY!))).toBeCloseTo(-1, 1); // nunca más de un metro
     const cones = nodes.filter((n) => n.name.startsWith('CONES_'));
-    expect(Math.min(...cones.map((n) => n.minY!))).toBeLessThan(-0.3);
+    expect(Math.min(...cones.map((n) => n.minY!))).toBeLessThan(-0.25); // en el borde de la pista, lejos del eje
     expect(nodes.some((n) => n.name.includes('_RELIEF'))).toBe(false);
   });
 
-  it('Desnivelador sobre un preset: parche solo donde sube y aviso de lo que baja', () => {
+  it('Desnivelador sobre un escenario 3D: deforma su suelo hacia arriba y hacia abajo, con su textura', () => {
+    // Tres pasadas subiendo en la recta este (x = 30) y tres bajando en la oeste (x = −30).
+    const pass = (id: string, direction: 'raise' | 'lower', x: number) => ({ id, direction, radius: 3, points: [ll(x, -20), ll(x, 20)] });
+    const relief = [pass('u1', 'raise', 30), pass('u2', 'raise', 30), pass('u3', 'raise', 30), pass('d1', 'lower', -30), pass('d2', 'lower', -30), pass('d3', 'lower', -30)];
+    const project = { ...ovalProject(), preset: 'etsi', relief };
+    const scenery = fakeSceneKn5();
+    const flat = parseTerrain({ ...rampTerrain(), heights: Buffer.from(new Int16Array(41 * 41).buffer).toString('base64') });
+    const files = buildTrackFiles(project, {
+      trackId: 'atc_test', perimeterWalls: false, satellite: null,
+      preset: { id: 'etsi', kn5: scenery, terrain: flat, attribution: [] },
+    });
+    const deformed = readKn5(files[presetKn5Name('etsi')]);
+    const nodes = flattenNodes(deformed.root);
+    const ground = nodes.filter((n) => n.name.startsWith('1ROAD_PARKING') && n.mesh);
+    expect(ground.length).toBeGreaterThan(0);
+    const ys = ground.flatMap((n) => [...n.mesh!.positions].filter((_, i) => i % 3 === 1));
+    expect(Math.max(...ys)).toBeCloseTo(0.225, 1);
+    expect(Math.min(...ys)).toBeCloseTo(-0.225, 1);
+    // La textura del escenario sigue igual: UV interpoladas del triángulo original.
+    for (const n of ground) {
+      const m = n.mesh!;
+      for (let v = 0; v < m.positions.length / 3; v += 97) {
+        expect(m.uvs[v * 2]).toBeCloseTo((m.positions[v * 3] + 100) / 200, 4);
+        expect(m.uvs[v * 2 + 1]).toBeCloseTo((m.positions[v * 3 + 2] + 100) / 200, 4);
+      }
+    }
+    // Lo que no es suelo no se toca, y se conservan texturas y materiales.
+    const wall = nodes.find((n) => n.name === '1WALL_BASE_0')!;
+    expect([...wall.mesh!.positions]).toEqual([...flattenNodes(readKn5(scenery).root).find((n) => n.name === '1WALL_BASE_0')!.mesh!.positions]);
+    expect(deformed.textures.map((t) => t.name)).toEqual(['parking.dds']);
+    expect(deformed.materials[0].textures).toEqual([['txDiffuse', 0, 'parking.dds']]);
+    // La pista sigue el suelo nuevo y no lleva parche; sin aviso de lo que baja.
+    const track = readKn5Nodes(files['atc_test.kn5']);
+    expect(track.some((n) => n.name.includes('_RELIEF'))).toBe(false);
+    expect(Math.min(...track.filter((n) => n.name.startsWith('CONES_')).map((n) => n.minY!))).toBeLessThan(-0.05);
+    expect(exportWarnings(project, buildScene(project)!).some((w) => w.includes('Desnivelador'))).toBe(false);
+  });
+
+  it('Desnivelador sobre un circuito de AC: solo sube, con un parche, y avisa de lo que baja', () => {
     const relief = [
       { id: 'u', direction: 'raise' as const, radius: 3, points: [ll(30, -20), ll(30, 20)] },
       { id: 'd', direction: 'lower' as const, radius: 3, points: [ll(-30, -20), ll(-30, 20)] },
     ];
-    const project = { ...ovalProject(), preset: 'etsi', relief };
-    const flat = parseTerrain({ ...rampTerrain(), heights: Buffer.from(new Int16Array(41 * 41).buffer).toString('base64') });
-    const files = buildTrackFiles(project, {
-      trackId: 'atc_test', perimeterWalls: false, satellite: null,
-      preset: { id: 'etsi', kn5: new Uint8Array([1]), terrain: flat, attribution: [] },
-    });
-    const patch = readKn5Nodes(files['atc_test.kn5']).filter((n) => n.name.startsWith('1ROAD_RELIEF'));
+    const project = { ...ovalProject(), preset: 'montmelo', relief };
+    const scene = buildScene(project)!;
+    const model = buildTrackModel(project, scene, { pitCount: 1, perimeterWalls: false, satellite: null, environment: { ground: () => 0, zones: false } });
+    const patch = flattenNodes(model.root).filter((n) => n.name.startsWith('1ROAD_RELIEF') && n.mesh);
     expect(patch.length).toBeGreaterThan(0);
-    expect(Math.min(...patch.map((n) => n.minY!))).toBeGreaterThan(0); // nunca por debajo del suelo
-    expect(Math.max(...patch.map((n) => n.maxY!))).toBeCloseTo(0.1, 1);
-    expect(exportWarnings(project, buildScene(project)!).some((w) => w.includes('Desnivelador'))).toBe(true);
+    const ys = patch.flatMap((n) => [...n.mesh!.positions].filter((_, i) => i % 3 === 1));
+    expect(Math.min(...ys)).toBeGreaterThan(0); // nunca por debajo del suelo
+    expect(Math.max(...ys)).toBeCloseTo(0.075, 1);
+    expect(exportWarnings(project, scene).some((w) => w.includes('Desnivelador'))).toBe(true);
+  });
+
+  it('lee un kn5 y lo vuelve a escribir igual (escenario de Isla Mágica)', () => {
+    // Sin toEqual: comparar 26 MB en el informe de error agota la memoria. Solo pueden cambiar
+    // los últimos bits del radio de alguna esfera envolvente, que se recalcula al escribir.
+    const changedBytes = (x: Uint8Array, y: Uint8Array): number => {
+      let n = Math.abs(x.length - y.length);
+      for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) n++;
+      return n;
+    };
+    const data = new Uint8Array(readFileSync('public/presets/isla_magica/isla_magica.kn5'));
+    expect(changedBytes(writeKn5(readKn5(data)), data)).toBeLessThan(8);
+    const small = fakeSceneKn5();
+    expect(changedBytes(writeKn5(readKn5(small)), small)).toBe(0);
   });
 
   it('Brush: calca visual y superficies físicas con menos agarre según las pasadas', () => {
-    // Una pasada de arena a lo largo de la recta este y dos de grava superpuestas en la oeste.
+    // Una pasada de arena a lo largo de la recta este y tres de grava superpuestas en la oeste.
     const sand = { id: 's', material: 'sand' as const, radius: 1.5, points: [ll(30, -20), ll(30, 20)] };
     const gravel = (id: string) => ({ id, material: 'gravel' as const, radius: 1.5, points: [ll(-30, -20), ll(-30, 20)] });
-    const files = buildTrackFiles({ ...ovalProject(), dirt: [sand, gravel('g1'), gravel('g2')] }, { trackId: 'atc_test', perimeterWalls: false, satellite: null });
+    const files = buildTrackFiles({ ...ovalProject(), dirt: [sand, gravel('g1'), gravel('g2'), gravel('g3')] }, { trackId: 'atc_test', perimeterWalls: false, satellite: null });
     const nodes = readKn5Nodes(files['atc_test.kn5']);
     const names = nodes.map((n) => n.name);
-    // Una pasada: solo el nivel ligero; dos pasadas: aparece el medio en el centro del trazo.
+    // Una pasada: solo el nivel ligero; tres: aparece el medio en el centro del trazo.
     expect(names).toContain('1DIRTSA1_0');
     expect(names).not.toContain('1DIRTSA2_0');
     expect(names).toContain('1DIRTGV2_0');

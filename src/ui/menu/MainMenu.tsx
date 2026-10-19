@@ -1,3 +1,5 @@
+import { useRef, useState } from 'react';
+import { openTrackZip } from '../../export/projectFile';
 import { useEditorStore } from '../../state/editorStore';
 import { hasDraft, useProjectStore } from '../../state/projectStore';
 import { ConeIcon, EditIcon, PlusIcon } from '../icons';
@@ -7,6 +9,10 @@ export function MainMenu() {
   const project = useProjectStore((s) => s.project);
   const reset = useProjectStore((s) => s.reset);
   const setEditor = useEditorStore((s) => s.set);
+  const notify = useEditorStore((s) => s.notify);
+  const fitRequest = useEditorStore((s) => s.fitRequest);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
 
   const openEditor = (fresh: boolean): void => {
     if (fresh) reset();
@@ -16,6 +22,20 @@ export function MainMenu() {
   const createNew = (): void => {
     if (hasDraft(project) && !window.confirm(`Se descartará el borrador «${project.name}». ¿Crear un circuito nuevo?`)) return;
     openEditor(true);
+  };
+
+  /** Editar circuito: abre el proyecto guardado en el ZIP de una pista exportada. */
+  const openTrack = async (file: File): Promise<void> => {
+    setOpenError(null);
+    const result = openTrackZip(new Uint8Array(await file.arrayBuffer()));
+    if (!result.ok) {
+      setOpenError(`${file.name}: ${result.error}`);
+      return;
+    }
+    if (hasDraft(project) && !window.confirm(`Se descartará el borrador «${project.name}». ¿Abrir «${result.project.name}»?`)) return;
+    reset(result.project);
+    setEditor({ screen: 'editor', tool: null, exportOpen: false, fitRequest: fitRequest + 1 });
+    notify(`Circuito «${result.project.name}» abierto`, 'success');
   };
 
   return (
@@ -39,16 +59,31 @@ export function MainMenu() {
               <small>Elige una zona en el mapa satélite y traza la pista</small>
             </span>
           </button>
-          <button className="menu-option" disabled title="Próximamente">
+          <button className="menu-option" onClick={() => fileInput.current?.click()}>
             <EditIcon size={26} />
             <span>
-              <strong>
-                Editar circuito <em className="menu-tag">Próximamente</em>
-              </strong>
-              <small>Abre un circuito exportado para modificarlo</small>
+              <strong>Editar circuito</strong>
+              <small>Abre el .zip de un circuito exportado para modificarlo</small>
             </span>
           </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".zip,application/zip"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = ''; // permite volver a elegir el mismo archivo
+              if (file) void openTrack(file);
+            }}
+          />
         </div>
+
+        {openError && (
+          <p className="menu-error" role="alert">
+            {openError}
+          </p>
+        )}
 
         {hasDraft(project) && (
           <button className="menu-resume" onClick={() => openEditor(false)}>

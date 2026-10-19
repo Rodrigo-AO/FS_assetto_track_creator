@@ -1,10 +1,11 @@
 /**
  * Suciedad pintada con el Brush: arena o grava esparcida sobre el circuito. Cada pasada es un
- * trazo con un radio; su aporte se difumina hacia el borde y las pasadas se acumulan. La densidad
- * resultante (0–1) se traduce en niveles de agarre para la física de AC y en una calca visual.
+ * trazo con un radio; su aporte se difumina hacia el borde y todo lo que se pinta se acumula
+ * (también al repasar dentro de la misma pasada). La densidad resultante (0–1) se traduce en
+ * niveles de agarre para la física de AC y en una calca visual.
  */
 import type { Vec2 } from '../geometry/vec2';
-import { brushFalloff, FIELD_PX_M, FIELD_TILE_M, FIELD_TILE_PX, strokeField, strokeTouches } from '../strokes/strokeField';
+import { brushFalloff, FIELD_PX_M, FIELD_TILE_M, FIELD_TILE_PX, strokeField, strokeTouches, type StrokeField } from '../strokes/strokeField';
 import type { DirtMaterial } from '../project/types';
 import type { SurfacePhysics } from '../surfaces/surfaceTypes';
 
@@ -15,7 +16,10 @@ export interface LocalDirtStroke {
   readonly points: readonly Vec2[];
 }
 
-/** Densidad que deja una pasada en el centro del trazo: «una ligera cantidad». */
+/**
+ * Densidad de una pasada «completa» en el eje del trazo: «una ligera cantidad». Como el pincel
+ * deja el 75 % en el centro, una pasada real deja 1 − 0,7^0,75 ≈ 0,23.
+ */
 export const BRUSH_STRENGTH = 0.3;
 
 /** Casillas en que se guarda la densidad (las del campo de trazos: 32 m, 0,125 m por píxel). */
@@ -37,13 +41,15 @@ export const tileKey = (material: DirtMaterial, ix: number, iy: number): string 
 export { brushFalloff, strokeTouches };
 
 /**
- * Densidad de suciedad por casillas. Dentro de un trazo manda el aporte máximo (un trazo no se
- * acumula consigo mismo); entre trazos se combina como capas: 1 − (1 − a)(1 − b).
+ * Densidad de suciedad por casillas. Los aportes se combinan como capas finas, 1 − (1 − a)(1 − b):
+ * con V pasadas completas acumuladas, la densidad es 1 − (1 − BRUSH_STRENGTH)^V. `fieldOf` permite
+ * reutilizar campos ya calculados (el editor los guarda mientras se pinta).
  */
-export function rasterizeDirt(strokes: readonly LocalDirtStroke[]): Map<string, DirtTile> {
+export function rasterizeDirt(strokes: readonly LocalDirtStroke[], fieldOf: (s: LocalDirtStroke) => StrokeField = strokeField): Map<string, DirtTile> {
   const tiles = new Map<string, DirtTile>();
+  const keep = Math.log(1 - BRUSH_STRENGTH);
   for (const stroke of strokes) {
-    for (const { ix, iy, value } of strokeField(stroke).values()) {
+    for (const { ix, iy, value } of fieldOf(stroke).values()) {
       const key = tileKey(stroke.material, ix, iy);
       let tile = tiles.get(key);
       if (!tile) {
@@ -51,7 +57,7 @@ export function rasterizeDirt(strokes: readonly LocalDirtStroke[]): Map<string, 
         tiles.set(key, tile);
       }
       for (let k = 0; k < value.length; k++) {
-        if (value[k] > 0) tile.density[k] = 1 - (1 - tile.density[k]) * (1 - BRUSH_STRENGTH * value[k]);
+        if (value[k] > 0) tile.density[k] = 1 - (1 - tile.density[k]) * Math.exp(keep * value[k]);
       }
     }
   }
@@ -71,8 +77,8 @@ export function dirtAt(tiles: ReadonlyMap<string, DirtTile>, material: DirtMater
 // --------------------------------------------------------------------------- física
 
 /**
- * Umbrales de densidad de cada nivel (ligero, medio, fuerte). Una pasada (0,3 en el centro) queda
- * en el nivel 1; dos pasadas superpuestas, en el 2; cuatro o más, en el 3.
+ * Umbrales de densidad de cada nivel (ligero, medio, fuerte). Una pasada (≈ 0,23 en el centro)
+ * queda en el nivel 1; dos superpuestas, en el 2; cinco o más, en el 3.
  */
 export const DIRT_LEVEL_THRESHOLDS = [0.05, 0.4, 0.7] as const;
 

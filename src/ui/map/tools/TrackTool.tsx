@@ -9,7 +9,7 @@ import type { TrackAnchor } from '../../../domain/project/types';
 import { useEditorStore } from '../../../state/editorStore';
 import { useProjectStore } from '../../../state/projectStore';
 import { isInsideArea, useScene } from '../../editor/sceneContext';
-import { fromL, ICONS, localToL, stopContextMenu, toL } from '../leafletUtils';
+import { fromL, ICONS, localToL, startsOnMarker, stopContextMenu, toL } from '../leafletUtils';
 import { useMetersPerPixel } from '../useMetersPerPixel';
 
 /** Tolerancia de simplificación del trazo a mano alzada (m). */
@@ -38,6 +38,7 @@ function PointsMode() {
   const inside = useOutsideGuard();
   useMapEvents({
     click: (e) => {
+      if (startsOnMarker(e)) return;
       const p = fromL(e.latlng);
       if (inside(p)) commit((proj) => actions.appendAnchors(proj, [p]));
     },
@@ -60,7 +61,7 @@ function BezierMode() {
   };
   useMapEvents({
     mousedown: (e) => {
-      if (spacePan || e.originalEvent.button !== 0) return;
+      if (spacePan || e.originalEvent.button !== 0 || startsOnMarker(e)) return;
       const p = fromL(e.latlng);
       if (inside(p)) update({ anchor: p, handle: p });
     },
@@ -93,7 +94,7 @@ function FreehandMode() {
 
   useMapEvents({
     mousedown: (e) => {
-      if (spacePan || e.originalEvent.button !== 0) return;
+      if (spacePan || e.originalEvent.button !== 0 || startsOnMarker(e)) return;
       const p = fromL(e.latlng);
       if (!inside(p)) return;
       stroke.current = [scene.projection.toLocal(p)];

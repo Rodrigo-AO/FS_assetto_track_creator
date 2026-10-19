@@ -82,11 +82,6 @@ export async function fetchCircuitTerrain(c: CircuitPreset, scene: Scene, cell =
   return parseTerrain(terrain);
 }
 
-/** Suelo de un escenario 3D (terrain.json del preset, en el plano del proyecto). */
-export async function fetchSceneTerrain(id: string): Promise<TerrainGrid> {
-  return parseTerrain(await getJson<TerrainJson>(presetAssets(id).terrain));
-}
-
 interface SurfaceMapJson {
   readonly origin: LatLng;
   readonly x0: number;

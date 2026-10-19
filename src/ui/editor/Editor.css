@@ -657,6 +657,7 @@ p.notice {
   background: var(--atc-white);
   box-shadow: var(--atc-shadow);
   font-size: 12px;
+  user-select: none;
 }
 
 .topo-legend-title {
@@ -675,14 +676,21 @@ p.notice {
 }
 
 .topo-legend-ticks {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  position: relative;
+  width: 44px;
   margin: 0;
   padding: 0;
   list-style: none;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* Cada altura a su altura real en la barra (la escala no es lineal). */
+.topo-legend-ticks li {
+  position: absolute;
+  left: 0;
+  transform: translateY(50%);
+  line-height: 1;
 }
 
 .topo-image {

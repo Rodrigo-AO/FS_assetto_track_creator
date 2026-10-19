@@ -67,3 +67,6 @@ export const useEditorStore = create<EditorState>()((set) => ({
   set: (patch) => set(patch),
   notify: (text, kind = 'info') => set({ toast: { id: Date.now(), text, kind } }),
 }));
+
+/** ¿Se ve la vista topográfica? Solo con el Desnivelador activo, que es donde está su botón. */
+export const selectTopo = (s: EditorState): boolean => s.mapView === 'topo' && s.tool === 'relief';

@@ -6,6 +6,7 @@ import { useProjectStore } from '../../state/projectStore';
 import { toL } from './leafletUtils';
 import { useScene } from '../editor/sceneContext';
 import { presetById } from '../../domain/presets/presets';
+import { repairAfterZoom } from './zoomRepair';
 
 const FIT_PADDING = 80;
 
@@ -19,6 +20,8 @@ export function MapController() {
   const scene = useScene();
   const { tool, trackMode, spacePan } = useEditorStore();
   const dragDraws = (tool === 'track' && trackMode !== 'points') || tool === 'brush' || tool === 'relief';
+
+  useEffect(() => repairAfterZoom(map), [map]);
 
   useEffect(() => {
     if (dragDraws && !spacePan) map.dragging.disable();

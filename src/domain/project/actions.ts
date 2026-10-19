@@ -95,8 +95,14 @@ export const removeZone = (p: TrackProject, id: string): TrackProject => ({ ...p
 // --------------------------------------------------------------------------- Brush (suciedad)
 
 /** Añade una pasada del Brush (un solo punto vale: deja una mancha redonda). */
-export const addDirtStroke = (p: TrackProject, material: DirtMaterial, radius: number, points: readonly LatLng[]): TrackProject =>
-  points.length ? { ...p, dirt: [...p.dirt, { id: newId(), material, radius, points }] } : p;
+export const addDirtStroke = (p: TrackProject, material: DirtMaterial, radius: number, points: readonly LatLng[], id = newId()): TrackProject =>
+  points.length ? { ...p, dirt: [...p.dirt, { id, material, radius, points }] } : p;
+
+/** Cambia el recorrido de una pasada (el editor la alarga mientras se pinta). */
+export const setDirtStrokePoints = (p: TrackProject, id: string, points: readonly LatLng[]): TrackProject => ({
+  ...p,
+  dirt: p.dirt.map((d) => (d.id === id ? { ...d, points } : d)),
+});
 
 /** Quita las pasadas indicadas (goma del Brush). */
 export const removeDirtStrokes = (p: TrackProject, ids: ReadonlySet<string>): TrackProject =>
@@ -107,8 +113,14 @@ export const clearDirt = (p: TrackProject): TrackProject => ({ ...p, dirt: [] })
 // --------------------------------------------------------------------------- Desnivelador
 
 /** Añade una pasada del Desnivelador. */
-export const addReliefStroke = (p: TrackProject, direction: ReliefDirection, radius: number, points: readonly LatLng[]): TrackProject =>
-  points.length ? { ...p, relief: [...p.relief, { id: newId(), direction, radius, points }] } : p;
+export const addReliefStroke = (p: TrackProject, direction: ReliefDirection, radius: number, points: readonly LatLng[], id = newId()): TrackProject =>
+  points.length ? { ...p, relief: [...p.relief, { id, direction, radius, points }] } : p;
+
+/** Cambia el recorrido de una pasada del Desnivelador (mientras se pinta). */
+export const setReliefStrokePoints = (p: TrackProject, id: string, points: readonly LatLng[]): TrackProject => ({
+  ...p,
+  relief: p.relief.map((r) => (r.id === id ? { ...r, points } : r)),
+});
 
 export const clearRelief = (p: TrackProject): TrackProject => ({ ...p, relief: [] });
 

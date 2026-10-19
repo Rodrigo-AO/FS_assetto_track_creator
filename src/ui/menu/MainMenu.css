@@ -130,3 +130,12 @@
 .menu-resume:hover {
   text-decoration: underline;
 }
+
+.menu-error {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--atc-danger);
+  border-radius: var(--atc-radius);
+  color: var(--atc-danger);
+  font-size: 13px;
+}
