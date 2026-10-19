@@ -138,3 +138,22 @@ describe('escena y superficies', () => {
     expect(ll(0, 0).lat).toBeCloseTo(37.4, 9);
   });
 });
+
+describe('ancho de pista', () => {
+  it('el ancho elegido antes de trazar se aplica al primer punto y a los siguientes', async () => {
+    const { appendAnchors, appendBezierAnchor, clearTrack, setTrackWidth, trackWidth } = await import('./project/actions');
+    const { createEmptyProject } = await import('./project/types');
+    const area = [ll(-50, -50), ll(50, -50), ll(50, 50), ll(-50, 50)];
+    let p = setTrackWidth({ ...createEmptyProject(), area }, 7.5);
+    expect(trackWidth(p)).toBe(7.5);
+    p = appendAnchors(p, [ll(0, 0), ll(10, 0)]);
+    expect(p.track.anchors.map((a) => a.widthLeft + a.widthRight)).toEqual([7.5, 7.5]);
+    // Bézier también, y al borrar el trazado se conserva para el próximo.
+    const bezier = appendBezierAnchor(setTrackWidth({ ...createEmptyProject(), area }, 5), ll(0, 0), ll(5, 0));
+    expect(bezier.track.anchors[0].widthLeft + bezier.track.anchors[0].widthRight).toBe(5);
+    expect(trackWidth(clearTrack(p))).toBe(7.5);
+    // Proyectos antiguos sin el campo: 3 m.
+    const { width: _w, ...oldTrack } = createEmptyProject().track;
+    expect(trackWidth({ ...createEmptyProject(), track: oldTrack })).toBe(3);
+  });
+});

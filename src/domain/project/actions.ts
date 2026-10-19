@@ -131,7 +131,15 @@ export const setBaseSurface = (p: TrackProject, baseSurface: SurfaceType): Track
 /** Ancho del último nodo, o el ancho por defecto si es el primero. */
 function nextWidths(p: TrackProject): Pick<TrackAnchor, 'widthLeft' | 'widthRight'> {
   const last = p.track.anchors[p.track.anchors.length - 1];
-  return last ? { widthLeft: last.widthLeft, widthRight: last.widthRight } : { widthLeft: DEFAULT_TRACK_WIDTH / 2, widthRight: DEFAULT_TRACK_WIDTH / 2 };
+  if (last) return { widthLeft: last.widthLeft, widthRight: last.widthRight };
+  const half = trackWidth(p) / 2;
+  return { widthLeft: half, widthRight: half };
+}
+
+/** Ancho total del trazado: el mayor de sus puntos, o el elegido para el primero si aún no hay. */
+export function trackWidth(p: TrackProject): number {
+  const widths = p.track.anchors.map((a) => a.widthLeft + a.widthRight);
+  return widths.length ? Math.max(...widths) : (p.track.width ?? DEFAULT_TRACK_WIDTH);
 }
 
 export function appendAnchors(p: TrackProject, positions: readonly LatLng[]): TrackProject {
@@ -205,9 +213,10 @@ export function setAnchorWidth(p: TrackProject, id: string, side: 'left' | 'righ
 }
 
 /** Aplica un ancho total a todo el trazado. */
+/** Ancho de todos los puntos y de los que se tracen después (también antes del primero). */
 export function setTrackWidth(p: TrackProject, total: number): TrackProject {
   const half = clampHalfWidth(total / 2);
-  return withTrack(p, { anchors: p.track.anchors.map((a) => ({ ...a, widthLeft: half, widthRight: half })) });
+  return withTrack(p, { width: half * 2, anchors: p.track.anchors.map((a) => ({ ...a, widthLeft: half, widthRight: half })) });
 }
 
 export function setSymmetric(p: TrackProject, symmetric: boolean): TrackProject {
@@ -237,7 +246,8 @@ export function reverseTrack(p: TrackProject): TrackProject {
   };
 }
 
-export const clearTrack = (p: TrackProject): TrackProject => withTrack(p, { anchors: [] });
+/** Borra el trazado; el ancho que tenía queda para el próximo. */
+export const clearTrack = (p: TrackProject): TrackProject => withTrack(p, { anchors: [], width: trackWidth(p) });
 
 // --------------------------------------------------------------------------- cronometraje
 

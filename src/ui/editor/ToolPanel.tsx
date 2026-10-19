@@ -172,8 +172,7 @@ function TrackPanel() {
   const presetId = useProjectStore((s) => s.project.preset);
   const commit = useProjectStore((s) => s.commit);
   const { trackMode, set } = useEditorStore();
-  const widths = track.anchors.map((a) => a.widthLeft + a.widthRight);
-  const width = widths.length ? Math.max(...widths) : 3;
+  const width = useProjectStore((s) => actions.trackWidth(s.project));
   return (
     <div className="stack">
       <Field label="Modo de trazado">

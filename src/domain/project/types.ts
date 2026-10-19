@@ -67,6 +67,11 @@ export interface TrackLayout {
   readonly autoCones: boolean;
   /** Separación entre conos de un mismo lateral, en metros. */
   readonly coneSpacing: number;
+  /**
+   * Ancho total (m) elegido en el panel: el del primer punto que se trace. Los siguientes heredan
+   * el del punto anterior. Falta en proyectos antiguos (entonces DEFAULT_TRACK_WIDTH).
+   */
+  readonly width?: number;
 }
 
 export interface TrackProject {
@@ -103,7 +108,7 @@ export function createEmptyProject(): TrackProject {
     relief: [],
     cones: [],
     conesCollidable: false,
-    track: { anchors: [], closed: true, symmetric: true, autoCones: true, coneSpacing: DEFAULT_CONE_SPACING },
+    track: { anchors: [], closed: true, symmetric: true, autoCones: true, coneSpacing: DEFAULT_CONE_SPACING, width: DEFAULT_TRACK_WIDTH },
     startFinish: null,
     sectors: [],
   };
