@@ -7,6 +7,7 @@ import { parseTerrain, terrainRange, type TerrainJson } from '../../domain/prese
 import { CONE_COLORS, CONE_SPECS } from '../../domain/cones/coneSpecs';
 import * as actions from '../../domain/project/actions';
 import { createEmptyProject } from '../../domain/project/types';
+import { CONE_PENALTY_S } from '../../export/ac/conePenalties';
 import { SURFACES, SURFACE_TYPES } from '../../domain/surfaces/surfaceTypes';
 import { useEditorStore, type TrackMode } from '../../state/editorStore';
 import { useProjectStore } from '../../state/projectStore';
@@ -238,10 +239,12 @@ function ConesPanel() {
           ))}
         </div>
       </Field>
-      <Toggle label="Hitbox (colisión cuadrada)" checked={collidable} onChange={(v) => commit((p) => actions.setConesCollidable(p, v))} />
+      <Toggle label="Hitbox (conos derribables)" checked={collidable} onChange={(v) => commit((p) => actions.setConesCollidable(p, v))} />
       <p className="muted panel-text">
-        {collidable ? 'Los conos son sólidos: el coche choca con una caja del tamaño de su base.' : 'Los conos se pueden atravesar.'} Afecta a
-        todos los conos, también a los automáticos.
+        {collidable
+          ? 'Los conos tienen física: el coche los derriba y los arrastra.'
+          : `Los conos se atraviesan y cada cono tocado suma ${CONE_PENALTY_S} s a la vuelta (aviso en pantalla; necesita Custom Shaders Patch).`}{' '}
+        Afecta a todos los conos, también a los automáticos.
       </p>
       <button className="btn btn-sm btn-danger" disabled={!cones.length} onClick={() => commit(actions.clearCones)}>
         <TrashIcon size={14} /> Quitar {cones.length} conos manuales

@@ -9,6 +9,7 @@ import { groundFromTerrain, type TerrainGrid } from '../domain/presets/terrain';
 import type { LocalGate } from '../domain/track/gates';
 import type { TrackProject } from '../domain/project/types';
 import { encodePng } from './binary/png';
+import { conePenaltyFiles } from './ac/conePenalties';
 import { writeKn5 } from './ac/kn5';
 import { readKn5 } from './ac/kn5Reader';
 import { deformSceneGround } from './ac/sceneGround';
@@ -159,6 +160,10 @@ export function buildTrackFiles(project: TrackProject, options: ExportOptions): 
     'ui/preview.png': encodePng(maps.preview),
     // Identifica la pista como creada por esta app y permite reabrirla con «Editar circuito».
     [PROJECT_FILE]: text(projectFileJson(project, options.trackId)),
+    // Conos sin colisión: +2 s por cono tocado (script de CSP). Los derribables no lo llevan.
+    ...Object.fromEntries(
+      Object.entries(project.conesCollidable ? {} : conePenaltyFiles([...scene.cones, ...scene.autoCones])).map(([path, body]) => [path, text(body)]),
+    ),
   };
 }
 

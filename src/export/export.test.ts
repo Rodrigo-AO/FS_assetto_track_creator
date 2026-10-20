@@ -10,6 +10,9 @@ import { buildScene } from '../domain/project/scene';
 import { readFileSync } from 'node:fs';
 import { boundingSphere, writeKn5, type Kn5Mesh, type Kn5Node } from './ac/kn5';
 import { readKn5 } from './ac/kn5Reader';
+import { CONE_PENALTY_S, CONE_SCRIPT_FILE, EXT_CONFIG_FILE } from './ac/conePenalties';
+import { PHYSICS_CONE_PREFIX } from './ac/trackScene';
+import { CONE_SPECS } from '../domain/cones/coneSpecs';
 import { buildTrackModel } from './ac/trackScene';
 
 const flattenNodes = (node: Kn5Node): Kn5Node[] => [node, ...node.children.flatMap(flattenNodes)];
@@ -181,23 +184,69 @@ describe('exportación a Assetto Corsa', () => {
   });
 
   it('produce una pista completa con mallas físicas y dummies de AC', () => {
-    const files = buildTrackFiles({ ...ovalProject(), conesCollidable: true }, { trackId: 'atc_test', perimeterWalls: true, satellite: null });
+    const files = buildTrackFiles(ovalProject(), { trackId: 'atc_test', perimeterWalls: true, satellite: null });
     expect(Object.keys(files).sort()).toEqual(
-      ['atc_test.kn5', 'data/map.ini', 'data/surfaces.ini', 'map.png', PROJECT_FILE, 'ui/outline.png', 'ui/preview.png', 'ui/ui_track.json'].sort(),
+      ['atc_test.kn5', 'data/map.ini', 'data/surfaces.ini', 'map.png', PROJECT_FILE, 'ui/outline.png', 'ui/preview.png', 'ui/ui_track.json',
+        EXT_CONFIG_FILE, CONE_SCRIPT_FILE].sort(),
     );
     const names = readKn5NodeNames(files['atc_test.kn5']);
-    for (const expected of ['1ROAD_TRACK_0', '1ROAD_BASE_0', '1GRAVEL_ZONES_0', '1WALL_CONES_0', '1WALL_LIMIT_0', 'CONES_BLUE_0_0',
+    for (const expected of ['1ROAD_TRACK_0', '1ROAD_BASE_0', '1GRAVEL_ZONES_0', '1WALL_LIMIT_0', 'CONES_BLUE_0_0',
       'CONES_YELLOW_0_0', 'AC_START_0', 'AC_PIT_3', 'AC_HOTLAP_START_0', 'AC_TIME_0_L', 'AC_TIME_0_R']) {
       expect(names).toContain(expected);
     }
+    // Sin colisión los conos se atraviesan: ni cajas rígidas ni objetos físicos.
+    expect(names.some((n) => n.includes('CONES') && /^\d/.test(n))).toBe(false);
+    expect(names.some((n) => n.startsWith('AC_POBJECT'))).toBe(false);
     const ini = new TextDecoder().decode(files['data/surfaces.ini']);
     expect(ini).toContain('KEY=GRAVEL');
-    expect(readKn5Nodes(files['atc_test.kn5']).find((n) => n.name === '1WALL_CONES_0')!.renderable).toBe(false);
     // Conos troceados en mallas pequeñas (casillas de 25 m): ninguna abarca todo el circuito.
     const coneMeshes = readKn5Nodes(files['atc_test.kn5']).filter((n) => n.name.startsWith('CONES_'));
     expect(coneMeshes.filter((n) => n.name.startsWith('CONES_BLUE_')).length).toBeGreaterThan(1);
     expect(Math.max(...coneMeshes.map((n) => n.radius!))).toBeLessThan(20);
     expect(Object.keys(unzipSync(zipTrackFiles(files, 'atc_test')))).toContain('atc_test/atc_test.kn5');
+  });
+
+  it('conos sin colisión: script de CSP que penaliza 2 s por cono tocado', () => {
+    const project = ovalProject();
+    const files = buildTrackFiles(project, { trackId: 'atc_test', perimeterWalls: false, satellite: null });
+    const config = new TextDecoder().decode(files[EXT_CONFIG_FILE]);
+    expect(config).toMatch(/^\[SCRIPT_0\]$/m); // CSP solo lee las secciones numeradas
+    expect(config).toContain('SCRIPT = atc_cones.lua');
+    const lua = new TextDecoder().decode(files[CONE_SCRIPT_FILE]);
+    const scene = buildScene(project)!;
+    // Una fila por cono, en coordenadas de AC (z = −y local).
+    const rows = [...lua.matchAll(/^ {2}\{(-?[\d.]+), (-?[\d.]+), ([\d.]+)\},$/gm)];
+    expect(rows).toHaveLength(scene.cones.length + scene.autoCones.length);
+    const first = scene.cones[0] ?? scene.autoCones[0];
+    expect(Number(rows[0][1])).toBeCloseTo(first.position.x, 2);
+    expect(Number(rows[0][2])).toBeCloseTo(-first.position.y, 2);
+    expect(lua).toContain(`local PENALTY_S = ${CONE_PENALTY_S}`);
+    expect(lua).toContain('ac.onLapCompleted(0,');
+  });
+
+  it('conos con colisión: cada cono es un objeto físico de AC que se puede derribar', () => {
+    const project = { ...ovalProject(), conesCollidable: true };
+    const files = buildTrackFiles(project, { trackId: 'atc_test', perimeterWalls: false, satellite: null });
+    expect(files[CONE_SCRIPT_FILE]).toBeUndefined();
+    const model = readKn5(files['atc_test.kn5']);
+    const nodes = flattenNodes(model.root);
+    expect(nodes.some((n) => n.name.startsWith('CONES_') || n.name.includes('WALL_CONES'))).toBe(false);
+    const scene = buildScene(project)!;
+    const all = [...scene.cones, ...scene.autoCones];
+    const objects = nodes.filter((n) => n.name.startsWith(PHYSICS_CONE_PREFIX) && !n.mesh);
+    expect(objects).toHaveLength(all.length);
+    // Estructura de Kunos: nodo en la base del cono, colisionador invisible con el mismo nombre y malla visible.
+    const cone = objects[0];
+    expect(cone.matrix![12]).toBeCloseTo(all[0].position.x, 3);
+    expect(cone.matrix![14]).toBeCloseTo(-all[0].position.y, 3);
+    const [collider, visual] = cone.children;
+    expect(collider.name).toBe(cone.name);
+    expect(collider.mesh!.renderable).toBe(false);
+    expect(collider.mesh!.positions.length / 3).toBe(8);
+    expect(visual.mesh!.renderable).toBe(true);
+    const ys = [...visual.mesh!.positions].filter((_, i) => i % 3 === 1);
+    expect(Math.min(...ys)).toBeCloseTo(0, 5); // coordenadas locales: la base en el origen del nodo
+    expect(Math.max(...ys)).toBeCloseTo(CONE_SPECS[all[0].color].height, 5);
   });
 
   it('Desnivelador en mapa libre: el suelo propio sube y baja, y los conos lo siguen', () => {

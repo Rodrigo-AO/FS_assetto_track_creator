@@ -125,6 +125,23 @@ export function appendCone(mesh: MeshData, center: Vec2, spec: ConeSpec, baseY =
   for (let j = 0; j < CONE_SEGMENTS; j++) mesh.triangle(top[j], top[j + 1], tip, UP);
 }
 
+/**
+ * Colisionador de un cono derribable: prisma de base cuadrada (la placa) hasta la altura del cono,
+ * convexo y de 8 vértices como los de Kunos. Las caras son verticales a propósito: con un tronco
+ * de pirámide, el cono aplastado contra el suelo hacía de rampa y el coche salía despedido; con
+ * caras verticales el coche lo empuja y lo derriba (probado en AC).
+ */
+export function appendConeCollider(mesh: MeshData, spec: ConeSpec): void {
+  const h = spec.baseSize / 2;
+  const corners = (y: number): number[] => [[-h, -h], [h, -h], [h, h], [-h, h]].map(([x, z]) => mesh.vertex([x, y, z], UP, [0.5, 0.5]));
+  const lo = corners(0);
+  const hi = corners(spec.height);
+  mesh.quad(lo[0], lo[1], lo[2], lo[3], [0, -1, 0]);
+  mesh.quad(hi[0], hi[1], hi[2], hi[3], UP);
+  const sides: Vec3[] = [[0, 0, -1], [1, 0, 0], [0, 0, 1], [-1, 0, 0]];
+  for (let k = 0; k < 4; k++) mesh.quad(lo[k], lo[(k + 1) % 4], hi[(k + 1) % 4], hi[k], sides[k]);
+}
+
 /** Caja de base cuadrada con caras hacia fuera (placa de cono o hitbox). */
 export function appendBox(mesh: MeshData, center: Vec2, size: number, y0: number, y1: number, uv: readonly [number, number] = [0.5, 0.5]): void {
   const h = size / 2;

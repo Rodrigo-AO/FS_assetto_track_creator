@@ -1,14 +1,14 @@
 import { CONE_COLORS, CONE_SPECS } from '../../domain/cones/coneSpecs';
 import { leftNormal, scale, sub, type Vec2 } from '../../domain/geometry/vec2';
 import type { Scene } from '../../domain/project/scene';
-import type { SurfaceType, TrackProject } from '../../domain/project/types';
+import type { ConeColor, SurfaceType, TrackProject } from '../../domain/project/types';
 import { SURFACES } from '../../domain/surfaces/surfaceTypes';
 import { sampleAt } from '../../domain/track/centerline';
 import { gateCenter, gateForward, gateTrackPosition, type LocalGate } from '../../domain/track/gates';
 import { encodeDds } from '../binary/dds';
 import type { RgbaImage } from '../binary/image';
 import type { Kn5Material, Kn5Model, Kn5Node, Kn5Texture } from './kn5';
-import { appendBox, appendCone, appendDraped, appendGridDraped, appendGround, appendStripe, appendWall, FLAT_GROUND, MeshData, type Ground } from './meshes';
+import { appendCone, appendConeCollider, appendDraped, appendGridDraped, appendGround, appendStripe, appendWall, FLAT_GROUND, MeshData, toAc, type Ground } from './meshes';
 import { layoutSurfaces } from './surfaceLayout';
 import { appendDirtDecal, appendDirtPhysics, dirtDecalImage } from './dirtMeshes';
 import { appendReliefPatch } from './reliefMeshes';
@@ -150,6 +150,34 @@ function meshNodes(prefix: string, mesh: MeshData, material: number, physics: bo
     .map((m, i) => ({ name: `${prefix}_${i}`, mesh: m, children: [] }));
 }
 
+/** Prefijo de los conos derribables: AC trata como objeto físico todo nodo `AC_POBJECT_…`. */
+export const PHYSICS_CONE_PREFIX = 'AC_POBJECT_ATC_CONE_';
+/** Holgura sobre el suelo al colocar un cono derribable (m): cae y se asienta al empezar. */
+const PHYSICS_CONE_DROP_M = 0.005;
+
+/**
+ * Cono derribable con la estructura de los objetos físicos de Kunos: un nodo `AC_POBJECT_…` en la
+ * base del cono, una malla hija con el mismo nombre que AC usa como colisionador (invisible) y la
+ * malla visible. Masa: la de AC por defecto para estos objetos (1 kg), la de un cono real.
+ */
+function physicsCone(cone: { position: Vec2; color: ConeColor }, index: number, baseY: number, material: number, hiddenMaterial: number): Kn5Node {
+  const spec = CONE_SPECS[cone.color];
+  const name = `${PHYSICS_CONE_PREFIX}${index}`;
+  const visual = new MeshData();
+  appendCone(visual, { x: 0, y: 0 }, spec, 0);
+  const collider = new MeshData();
+  appendConeCollider(collider, spec);
+  const [x, y, z] = toAc(cone.position, baseY + PHYSICS_CONE_DROP_M);
+  return {
+    name,
+    matrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1],
+    children: [
+      { name, mesh: collider.toKn5Meshes(hiddenMaterial, { castShadows: false, renderable: false })[0], children: [] },
+      { name: `ATC_CONE_${index}`, mesh: visual.toKn5Meshes(material, { castShadows: true, renderable: true })[0], children: [] },
+    ],
+  };
+}
+
 function surfaceUv(type: SurfaceType): (v: Vec2) => readonly [number, number] {
   const tile = SURFACE_TILE_METERS[type];
   return (v) => [v.x / tile, -v.y / tile];
@@ -228,29 +256,26 @@ export function buildTrackModel(project: TrackProject, scene: Scene, options: Sc
     physics.forEach((mesh, level) => children.push(...meshNodes(`1${DIRT_SPECS[material].levels[level].key}`, mesh, hiddenMaterial, true, false)));
   }
 
-  // Conos en mallas por casillas de CONE_TILE_M, como trocea Kunos sus pistas: con una sola malla
-  // de ~50 m por color, AC dejaba a veces de dibujar la azul (la sombra sí salía).
   const allCones = [...scene.cones, ...scene.autoCones];
-  for (const color of CONE_COLORS) {
-    const spec = CONE_SPECS[color];
-    const material = lib.diffuse(`ATC_CONE_${color.toUpperCase()}`, () => coneTexture(spec), 0.2, CONE_LIGHT);
-    const tiles = new Map<string, MeshData>();
-    for (const cone of allCones.filter((c) => c.color === color)) {
-      const key = `${Math.floor(cone.position.x / CONE_TILE_M)}_${Math.floor(cone.position.y / CONE_TILE_M)}`;
-      if (!tiles.has(key)) tiles.set(key, new MeshData());
-      appendCone(tiles.get(key)!, cone.position, spec, ground(cone.position));
+  const coneMaterials = Object.fromEntries(
+    CONE_COLORS.map((color) => [color, lib.diffuse(`ATC_CONE_${color.toUpperCase()}`, () => coneTexture(CONE_SPECS[color]), 0.2, CONE_LIGHT)]),
+  ) as Record<ConeColor, number>;
+  if (project.conesCollidable) {
+    // Conos derribables: cada cono es un objeto físico de AC (`AC_POBJECT_…`, como los de las
+    // pistas de Kunos), que el coche puede tirar y arrastrar.
+    allCones.forEach((cone, i) => children.push(physicsCone(cone, i, ground(cone.position), coneMaterials[cone.color], hiddenMaterial)));
+  } else {
+    // Conos sin colisión, en mallas por casillas de CONE_TILE_M como trocea Kunos sus pistas: con
+    // una sola malla de ~50 m por color, AC dejaba a veces de dibujar la azul (la sombra sí salía).
+    for (const color of CONE_COLORS) {
+      const tiles = new Map<string, MeshData>();
+      for (const cone of allCones.filter((c) => c.color === color)) {
+        const key = `${Math.floor(cone.position.x / CONE_TILE_M)}_${Math.floor(cone.position.y / CONE_TILE_M)}`;
+        if (!tiles.has(key)) tiles.set(key, new MeshData());
+        appendCone(tiles.get(key)!, cone.position, CONE_SPECS[color], ground(cone.position));
+      }
+      [...tiles.values()].forEach((mesh, i) => children.push(...meshNodes(`CONES_${color.toUpperCase()}_${i}`, mesh, coneMaterials[color], false)));
     }
-    [...tiles.values()].forEach((mesh, i) => children.push(...meshNodes(`CONES_${color.toUpperCase()}_${i}`, mesh, material, false)));
-  }
-
-  if (project.conesCollidable && allCones.length) {
-    const hitboxes = new MeshData();
-    for (const cone of allCones) {
-      const spec = CONE_SPECS[cone.color];
-      const g = ground(cone.position);
-      appendBox(hitboxes, cone.position, spec.baseSize, g, g + spec.height);
-    }
-    children.push(...meshNodes('1WALL_CONES', hitboxes, hiddenMaterial, true, false));
   }
   if (options.perimeterWalls) {
     const walls = new MeshData();
