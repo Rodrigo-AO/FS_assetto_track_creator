@@ -12,6 +12,7 @@ import { boundingSphere, writeKn5, type Kn5Mesh, type Kn5Node } from './ac/kn5';
 import { readKn5 } from './ac/kn5Reader';
 import { CONE_PENALTY_S, CONE_SCRIPT_FILE, EXT_CONFIG_FILE } from './ac/conePenalties';
 import { PHYSICS_CONE_PREFIX } from './ac/trackScene';
+import { PHYSICS_CONE_MASS_KG, withConePhysics } from './ac/trackFiles';
 import { CONE_SPECS } from '../domain/cones/coneSpecs';
 import { buildTrackModel } from './ac/trackScene';
 
@@ -247,6 +248,17 @@ describe('exportación a Assetto Corsa', () => {
     const ys = [...visual.mesh!.positions].filter((_, i) => i % 3 === 1);
     expect(Math.min(...ys)).toBeCloseTo(0, 5); // coordenadas locales: la base en el origen del nodo
     expect(Math.max(...ys)).toBeCloseTo(CONE_SPECS[all[0].color].height, 5);
+    // Masa real del cono (0,45 kg): exige la física extendida de CSP, activada en [SURFACE_0].
+    const ini = new TextDecoder().decode(files['data/surfaces.ini']);
+    expect(ini).toMatch(/\[SURFACE_0\][^[]*WAV_PITCH=extended-0/);
+    expect(ini).toContain(`[DYNAMIC_OBJECTS_ATC_CONES]\r\nMESHES = ${PHYSICS_CONE_PREFIX}?\r\nMASS = ${PHYSICS_CONE_MASS_KG}`);
+    expect(PHYSICS_CONE_MASS_KG).toBe(0.45);
+    // Sin conos derribables no se activa: la pista sigue abriéndose en AC sin CSP.
+    const plain = new TextDecoder().decode(buildTrackFiles(ovalProject(), { trackId: 'atc_test', perimeterWalls: false, satellite: null })['data/surfaces.ini']);
+    expect(plain).not.toContain('extended-');
+    expect(plain).not.toContain('DYNAMIC_OBJECTS');
+    // Un surfaces.ini que ya era extendido (circuito con CSP) no se marca dos veces.
+    expect(withConePhysics('[SURFACE_0]\r\nKEY=ROAD\r\nWAV_PITCH=extended-0\r\n', 'X_')).not.toContain('extended-extended');
   });
 
   it('Desnivelador en mapa libre: el suelo propio sube y baja, y los conos lo siguen', () => {

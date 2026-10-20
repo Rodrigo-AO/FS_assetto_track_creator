@@ -13,8 +13,8 @@ import { conePenaltyFiles } from './ac/conePenalties';
 import { writeKn5 } from './ac/kn5';
 import { readKn5 } from './ac/kn5Reader';
 import { deformSceneGround } from './ac/sceneGround';
-import { mapAssets, surfacesIni, uiTrackJson } from './ac/trackFiles';
-import { buildTrackModel, type SatelliteTexture } from './ac/trackScene';
+import { mapAssets, surfacesIni, uiTrackJson, withConePhysics } from './ac/trackFiles';
+import { buildTrackModel, PHYSICS_CONE_PREFIX, type SatelliteTexture } from './ac/trackScene';
 import { PROJECT_FILE, projectFileJson } from './projectFile';
 
 export { PROJECT_FILE };
@@ -107,6 +107,10 @@ export function exportWarnings(project: TrackProject, scene: Scene): string[] {
   return warnings;
 }
 
+/** Con conos derribables, `surfaces.ini` les da su masa real (activa la física extendida de CSP). */
+const withConesIfCollidable = (project: TrackProject, ini: string): string =>
+  project.conesCollidable ? withConePhysics(ini, PHYSICS_CONE_PREFIX) : ini;
+
 /** kn5 del escenario con el Desnivelador aplicado a su suelo (el original si no hay desniveles). */
 function presetKn5(kn5: Uint8Array, scene: Scene): Uint8Array {
   if (!scene.relief.length) return kn5;
@@ -142,7 +146,7 @@ export function buildTrackFiles(project: TrackProject, options: ExportOptions): 
   return {
     ...environmentFiles,
     [trackKn5]: writeKn5(model),
-    'data/surfaces.ini': text(circuit ? mergeSurfacesIni(circuit.surfacesIni, surfacesIni()) : surfacesIni()),
+    'data/surfaces.ini': text(withConesIfCollidable(project, circuit ? mergeSurfacesIni(circuit.surfacesIni, surfacesIni()) : surfacesIni())),
     'data/map.ini': text(maps.mapIni),
     'map.png': encodePng(maps.mapPng),
     'ui/ui_track.json': text(

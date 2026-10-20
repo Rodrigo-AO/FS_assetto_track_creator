@@ -17,6 +17,19 @@ export function surfacesIni(): string {
   }).join('\r\n\r\n') + '\r\n';
 }
 
+/** Masa de un cono derribable (kg), la de un cono de Formula Student. */
+export const PHYSICS_CONE_MASS_KG = 0.45;
+
+/**
+ * Conos derribables con su masa real. AC da 1 kg a todo objeto físico (`AC_POBJECT_…`); cambiarla
+ * exige la física extendida de Custom Shaders Patch, que se activa añadiendo `extended-` al
+ * `WAV_PITCH` de `[SURFACE_0]`. Con ella, AC sin CSP no puede abrir la pista (no entiende ese valor).
+ */
+export function withConePhysics(ini: string, meshPrefix: string): string {
+  const extended = ini.replace(/(\[SURFACE_0\][^[]*?WAV_PITCH=)(?!extended-)/, '$1extended-');
+  return [extended.trimEnd(), '', '[DYNAMIC_OBJECTS_ATC_CONES]', `MESHES = ${meshPrefix}?`, `MASS = ${PHYSICS_CONE_MASS_KG}`, ''].join('\r\n');
+}
+
 export interface UiTrackInfo {
   readonly name: string;
   readonly lat: number;

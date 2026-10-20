@@ -8,6 +8,7 @@ import { CONE_COLORS, CONE_SPECS } from '../../domain/cones/coneSpecs';
 import * as actions from '../../domain/project/actions';
 import { createEmptyProject } from '../../domain/project/types';
 import { CONE_PENALTY_S } from '../../export/ac/conePenalties';
+import { PHYSICS_CONE_MASS_KG } from '../../export/ac/trackFiles';
 import { SURFACES, SURFACE_TYPES } from '../../domain/surfaces/surfaceTypes';
 import { useEditorStore, type TrackMode } from '../../state/editorStore';
 import { useProjectStore } from '../../state/projectStore';
@@ -242,7 +243,7 @@ function ConesPanel() {
       <Toggle label="Hitbox (conos derribables)" checked={collidable} onChange={(v) => commit((p) => actions.setConesCollidable(p, v))} />
       <p className="muted panel-text">
         {collidable
-          ? 'Los conos tienen física: el coche los derriba y los arrastra.'
+          ? `Los conos tienen física (${PHYSICS_CONE_MASS_KG.toLocaleString('es-ES')} kg): el coche los derriba y los arrastra. Necesita Custom Shaders Patch con física extendida (la pista la activa; sin CSP, AC no la abre).`
           : `Los conos se atraviesan y cada cono tocado suma ${CONE_PENALTY_S} s a la vuelta (aviso en pantalla; necesita Custom Shaders Patch).`}{' '}
         Afecta a todos los conos, también a los automáticos.
       </p>
