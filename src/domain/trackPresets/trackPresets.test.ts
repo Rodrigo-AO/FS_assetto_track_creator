@@ -118,12 +118,22 @@ describe('Track presets de AutoX', () => {
     });
   }
 
-  it('respeta las separaciones de slalom rotuladas en «Jerez Parking» (8 y 11 m)', () => {
-    const slalom = trackPresetById('jerez_parking')!.layout.cones.filter((c) => c.color === 'yellow').map((c) => at(c.p));
-    expect(slalom).toHaveLength(11);
-    const gaps = slalom.slice(1).map((p, i) => distance(p, slalom[i]));
-    expect(gaps.slice(0, 4).every((g) => Math.abs(g - 8) < 0.05)).toBe(true);
-    expect(gaps.slice(5).every((g) => Math.abs(g - 11) < 0.05)).toBe(true);
+  it('los de Jerez son los retocados por Rodrigo en la app, con sus conos', () => {
+    const count = (id: string): Record<string, number> => {
+      const out: Record<string, number> = {};
+      for (const c of trackPresetById(id)!.layout.cones) out[c.color] = (out[c.color] ?? 0) + 1;
+      return out;
+    };
+    expect(count('jerez_parking')).toEqual({ orange: 370 });
+    expect(count('jerez_neumaticos')).toEqual({ orange: 55, blue: 125, yellow: 132 });
+  });
+
+  it('conserva los anchos asimétricos: al editarlos no se igualan los dos lados', () => {
+    const load = (id: string): TrackProject => applyTrackPresetAtHome(createEmptyProject(), trackPresetById(id)!);
+    expect(load('jerez_parking').track.symmetric).toBe(true);
+    const { track } = load('jerez_neumaticos');
+    expect(track.symmetric).toBe(false);
+    expect(track.anchors.some((a) => a.widthLeft !== a.widthRight)).toBe(true);
   });
 
   it('exporta sobre su escenario con los conos apoyados en el suelo inclinado', () => {

@@ -43,10 +43,11 @@ Referencias visuales: Google Maps y Street View (solo para medir) y PNOA máxima
 
 ### Track presets de AutoX
 
-Los datos de `src/domain/trackPresets/autocross.json` los genera `tools/track_presets/digitize.py` a partir de los dibujos de la página de Notion «Circuitos de autoX», georreferenciados contra la ortofoto PNOA (`tools/track_presets/georef.json`):
+Los datos están en `src/domain/trackPresets/autocross.json`. *Isla Mágica Pruebas de Piloto* la genera `digitize.py` a partir de su dibujo, georreferenciado (`georef.json`). *Jerez Parking* y *Jerez Neumáticos* partieron también de los dibujos, pero se retocaron a mano en la app para acercarlos a la realidad y se importan desde el .zip exportado con `import_zip.py`:
 
 ```bash
 tools/presets/.venv/Scripts/python.exe tools/track_presets/digitize.py
+tools/presets/.venv/Scripts/python.exe tools/track_presets/import_zip.py jerez_parking ruta/atc_jerez_parking.zip
 ```
 
 ### Circuitos de Assetto Corsa

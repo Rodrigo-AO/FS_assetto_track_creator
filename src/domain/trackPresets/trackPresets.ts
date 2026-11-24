@@ -1,7 +1,7 @@
 /**
  * Track presets: circuitos completos (trazado, conos, salida y marcas) que se añaden al proyecto de
  * una vez. Los de AutoX están georreferenciados y se cargan en su sitio real; todos se pueden colocar
- * también donde se quiera, girados. Los datos de AutoX los genera tools/track_presets/digitize.py.
+ * también donde se quiera, girados. Los datos de AutoX salen de tools/track_presets/.
  */
 import { LocalProjection, type LatLng } from '../geo/projection';
 import { pointInRing } from '../geometry/polygon';
@@ -41,8 +41,8 @@ export const TRACK_PRESETS: readonly TrackPreset[] = [
     layout: skidpadLayout(),
     home: null,
   },
-  autocrossPreset('jerez_parking', 'Jerez Parking', 'parking_jerez', 'AutoX sobre el trazado pintado del parking del Circuito de Jerez: puertas, chicane y dos slaloms (8 y 11 m).'),
-  autocrossPreset('jerez_neumaticos', 'Jerez Neumáticos', 'karting_jerez', 'AutoX en el karting de Jerez Neumáticos, con slaloms en la recta y lazo en el parking.'),
+  autocrossPreset('jerez_parking', 'Jerez Parking', 'parking_jerez', 'AutoX sobre el trazado pintado del parking del Circuito de Jerez, con barreras de conos que estrechan el carril.'),
+  autocrossPreset('jerez_neumaticos', 'Jerez Neumáticos', 'karting_jerez', 'AutoX en el karting de Jerez Neumáticos, con chicanes de conos en las rectas y lazo en el parking.'),
   autocrossPreset('isla_magica_pruebas', 'Isla Mágica Pruebas de Piloto', 'isla_magica', 'AutoX de las pruebas de piloto en el parking de Isla Mágica, con cruce de skidpad.'),
 ];
 
@@ -106,7 +106,7 @@ export function applyTrackPreset(p: TrackProject, preset: TrackPreset, placement
         widthRight: a.right,
       })),
       closed: layout.closed,
-      symmetric: true,
+      symmetric: layout.anchors.every((a) => a.left === a.right),
       // Los conos del preset son los de verdad: los automáticos se sumarían encima.
       autoCones: false,
       startOffset: layout.startOffset,
