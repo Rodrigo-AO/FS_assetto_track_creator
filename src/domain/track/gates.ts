@@ -38,9 +38,24 @@ export function alignGateToTrack(geometry: TrackGeometry | null, g: LocalGate): 
   return dot(gateForward(g), m.tangent) < 0 ? { left: g.right, right: g.left } : g;
 }
 
-/** Distancia a lo largo de la pista del centro de una línea. */
+/** Diferencia de distancia (m) por debajo de la cual dos pasos por una línea se consideran el mismo sitio. */
+const SAME_PLACE_M = 0.5;
+
+/**
+ * Distancia a lo largo de la pista del centro de una línea. En un trazado abierto que pasa varias
+ * veces por ella (skidpad), la de la primera pasada: la parrilla va en la recta de entrada.
+ */
 export function gateTrackPosition(geometry: TrackGeometry, g: LocalGate): number {
-  return geometry.samples[nearestSampleIndex(geometry.samples, gateCenter(g))].s;
+  const { samples, closed } = geometry;
+  const center = gateCenter(g);
+  const nearest = samples[nearestSampleIndex(samples, center)];
+  if (closed) return nearest.s;
+  const best = distance(nearest.position, center);
+  const first = samples.findIndex((m) => distance(m.position, center) < best + SAME_PLACE_M);
+  // Dentro de esa primera pasada, la muestra más próxima.
+  let i = first;
+  while (i + 1 < samples.length && distance(samples[i + 1].position, center) < distance(samples[i].position, center)) i++;
+  return samples[i].s;
 }
 
 /**

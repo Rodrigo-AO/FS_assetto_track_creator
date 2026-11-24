@@ -5,7 +5,7 @@ import { useScene } from './sceneContext';
 
 function useHint(): string | null {
   const scene = useScene();
-  const { tool, areaMode, trackMode, brushMode } = useEditorStore();
+  const { tool, areaMode, trackMode, brushMode, trackPresetPlacing } = useEditorStore();
   const hasTrack = useProjectStore((s) => s.project.track.anchors.length >= 2);
   const preset = presetById(useProjectStore((s) => s.project.preset));
   switch (tool) {
@@ -24,6 +24,11 @@ function useHint(): string | null {
         bezier: 'Pulsa y arrastra para crear un nodo con manejadores · mantén Espacio para mover el mapa',
         freehand: 'Pulsa y dibuja el trazado a mano alzada · mantén Espacio para mover el mapa',
       }[trackMode];
+    case 'trackPresets':
+      if (!scene) return 'Carga un circuito en su ubicación real, o delimita un área para colocar un preset donde quieras';
+      return trackPresetPlacing
+        ? 'Mueve el ratón y haz clic para colocar el circuito · gíralo desde el panel'
+        : 'Elige un circuito y cárgalo en su ubicación real, o pulsa «Colocar en el mapa»';
     case 'cones':
       return 'Clic dentro del área para poner un cono · arrástralo para moverlo · clic derecho para quitarlo';
     case 'startFinish':

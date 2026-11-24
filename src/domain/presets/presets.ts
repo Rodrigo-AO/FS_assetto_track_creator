@@ -22,8 +22,6 @@ export interface PresetRequirement {
   readonly name: string;
   readonly author: string;
   readonly url: string | null;
-  /** Copia del mod incluida en el repositorio (ruta desde la raíz), para instalarlo sin buscarlo. */
-  readonly bundled?: string;
 }
 
 /**

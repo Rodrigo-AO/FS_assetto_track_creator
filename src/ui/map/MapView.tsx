@@ -20,7 +20,9 @@ import { AreaTool } from './tools/AreaTool';
 import { ConeTool } from './tools/ConeTool';
 import { GateTool } from './tools/GateTool';
 import { SurfaceTool } from './tools/SurfaceTool';
+import { TrackPresetTool } from './tools/TrackPresetTool';
 import { TrackTool } from './tools/TrackTool';
+import { MarkingsLayer } from './layers/MarkingsLayer';
 
 /** Vista inicial por defecto: Sevilla (sede de ARUS). */
 const DEFAULT_CENTER: LPoint = [37.4125, -6.0045];
@@ -68,11 +70,13 @@ export function MapView() {
         <DirtLayer />
         {!topo && <ReliefStrokesLayer />}
         <TrackLayer />
+        <MarkingsLayer />
         <GatesLayer />
         <ConesLayer />
 
         {tool === 'area' && <AreaTool />}
         {tool === 'track' && <TrackTool />}
+        {tool === 'trackPresets' && <TrackPresetTool />}
         {tool === 'cones' && <ConeTool />}
         {(tool === 'startFinish' || tool === 'sectors') && <GateTool kind={tool} />}
         {tool === 'surface' && <SurfaceTool />}

@@ -29,6 +29,8 @@ export interface Scene {
   readonly autoCones: readonly PlacedCone[];
   /** Líneas orientadas en el sentido de la pista (si existe). */
   readonly startFinish: LocalGate | null;
+  /** Líneas pintadas en el plano local. */
+  readonly markings: ReadonlyArray<{ readonly points: readonly Vec2[]; readonly width: number }>;
   /** Sectores ordenados por su posición en pista desde la salida/meta. */
   readonly sectors: readonly SceneSector[];
 }
@@ -75,6 +77,7 @@ export function buildScene(project: TrackProject): Scene | null {
     cones: project.cones.map((c) => ({ position: projection.toLocal(c.position), color: c.color })),
     relief: (project.relief ?? []).map((r) => ({ direction: r.direction, radius: r.radius, points: r.points.map((p) => projection.toLocal(p)) })),
     dirt: (project.dirt ?? []).map((d) => ({ material: d.material, radius: d.radius, points: d.points.map((p) => projection.toLocal(p)) })),
+    markings: (project.markings ?? []).map((m) => ({ points: m.points.map((p) => projection.toLocal(p)), width: m.width })),
     autoCones,
     startFinish,
     sectors: orderSectors(track, startFinish, sectors, (s) => s.gate),

@@ -246,8 +246,11 @@ export function reverseTrack(p: TrackProject): TrackProject {
   };
 }
 
-/** Borra el trazado; el ancho que tenía queda para el próximo. */
-export const clearTrack = (p: TrackProject): TrackProject => withTrack(p, { anchors: [], width: trackWidth(p) });
+/** Borra el trazado (y sus líneas pintadas); el ancho que tenía queda para el próximo. */
+export const clearTrack = (p: TrackProject): TrackProject => ({
+  ...withTrack(p, { anchors: [], width: trackWidth(p), startOffset: undefined }),
+  markings: [],
+});
 
 // --------------------------------------------------------------------------- cronometraje
 

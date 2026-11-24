@@ -49,8 +49,8 @@ export async function fetchCircuitStatus(c: CircuitPreset): Promise<boolean> {
 
 /** Texto de la dependencia (ui_track.json y mensajes de error). */
 export function requirementText(c: CircuitPreset): string {
-  const { name, author, url, bundled } = c.requires;
-  const source = bundled ? ` (descomprime ${bundled} del repositorio en content/tracks)` : url ? `: ${url}` : '';
+  const { name, author, url } = c.requires;
+  const source = url ? `: ${url}` : '';
   return `Requiere el circuito «${name}» (${author}) instalado en content/tracks/${c.acTrack}${source}.`;
 }
 

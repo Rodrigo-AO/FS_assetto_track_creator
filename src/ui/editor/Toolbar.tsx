@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import { useEditorStore, type ToolId } from '../../state/editorStore';
-import { AreaIcon, ChevronLeftIcon, ChevronRightIcon, ConeIcon, FlagIcon, SectorIcon, SurfaceIcon, BrushIcon, ReliefIcon, TrackIcon } from '../icons';
+import { AreaIcon, ChevronLeftIcon, ChevronRightIcon, ConeIcon, FlagIcon, SectorIcon, SurfaceIcon, BrushIcon, ReliefIcon, TrackIcon, TrackPresetsIcon } from '../icons';
 import { circuitPresetById } from '../../domain/presets/presets';
 import { useProjectStore } from '../../state/projectStore';
 import { useScene } from './sceneContext';
@@ -14,6 +14,7 @@ interface ToolEntry {
 export const TOOLS: readonly ToolEntry[] = [
   { id: 'area', label: 'Delimitar área', Icon: AreaIcon },
   { id: 'track', label: 'Track creator', Icon: TrackIcon },
+  { id: 'trackPresets', label: 'Track presets', Icon: TrackPresetsIcon },
   { id: 'cones', label: 'Conos', Icon: ConeIcon },
   { id: 'startFinish', label: 'Salida / Meta', Icon: FlagIcon },
   { id: 'sectors', label: 'Sectores', Icon: SectorIcon },
@@ -42,7 +43,8 @@ export function Toolbar() {
       </button>
       {TOOLS.map(({ id, label, Icon }) => {
         const blocked = id === 'surface' && onCircuit;
-        const enabled = (id === 'area' || hasArea) && !blocked;
+        // Los Track presets se abren sin área: los georreferenciados eligen ellos su preset de mapa.
+        const enabled = (id === 'area' || id === 'trackPresets' || hasArea) && !blocked;
         return (
           <button
             key={id}

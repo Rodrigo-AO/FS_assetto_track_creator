@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { ConeColor, DirtMaterial, ReliefDirection, SurfaceType } from '../domain/project/types';
 
 export type Screen = 'menu' | 'editor';
-export type ToolId = 'area' | 'cones' | 'startFinish' | 'sectors' | 'surface' | 'brush' | 'relief' | 'track';
+export type ToolId = 'area' | 'cones' | 'startFinish' | 'sectors' | 'surface' | 'brush' | 'relief' | 'track' | 'trackPresets';
 export type MapView = 'satellite' | 'topo';
 export type BrushMode = 'paint' | 'erase';
 export type AreaMode = 'polygon' | 'rectangle';
@@ -31,6 +31,10 @@ interface EditorState {
   /** Fondo del mapa: satélite (con la capa del circuito si la hay) o vista topográfica a color. */
   mapView: MapView;
   trackMode: TrackMode;
+  /** Track preset elegido, giro (grados) y si se está colocando a mano en el mapa. */
+  trackPresetId: string;
+  trackPresetRotation: number;
+  trackPresetPlacing: boolean;
   selectedZoneId: string | null;
   exportOpen: boolean;
   /** Barra espaciadora pulsada: el arrastre mueve el mapa aunque la herramienta lo use. */
@@ -58,6 +62,9 @@ export const useEditorStore = create<EditorState>()((set) => ({
   reliefRadius: 2,
   mapView: 'satellite',
   trackMode: 'points',
+  trackPresetId: 'skidpad',
+  trackPresetRotation: 0,
+  trackPresetPlacing: true,
   selectedZoneId: null,
   exportOpen: false,
   spacePan: false,

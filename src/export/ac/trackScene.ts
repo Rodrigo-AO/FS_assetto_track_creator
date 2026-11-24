@@ -283,11 +283,19 @@ export function buildTrackModel(project: TrackProject, scene: Scene, options: Sc
     children.push(...meshNodes('1WALL_LIMIT', walls, hiddenMaterial, true, false));
   }
 
+  if (scene.markings.length) {
+    const paint = new MeshData();
+    for (const m of scene.markings) {
+      for (let i = 0; i + 1 < m.points.length; i++) appendStripe(paint, m.points[i], m.points[i + 1], m.width, env ? 0.012 : 0.004, ground);
+    }
+    children.push(...meshNodes('LINE_MARKINGS', paint, hiddenMaterial, false));
+  }
+
   if (scene.startFinish) {
     const line = new MeshData();
     appendStripe(line, scene.startFinish.left, scene.startFinish.right, 0.3, env ? 0.012 : 0.004, ground);
     children.push(...meshNodes('LINE_START_FINISH', line, hiddenMaterial, false));
-    const grid = gridPoses(scene, scene.startFinish, options.pitCount);
+    const grid = gridPoses(scene, scene.startFinish, options.pitCount, project.track.startOffset);
     grid.forEach((pose, i) => children.push(dummy(`AC_START_${i}`, pose, ground), dummy(`AC_PIT_${i}`, pose, ground)));
     const [hotlap] = gridPoses(scene, scene.startFinish, 1, HOTLAP_OFFSET_M);
     children.push(dummy('AC_HOTLAP_START_0', hotlap, ground));

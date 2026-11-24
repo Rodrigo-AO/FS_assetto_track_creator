@@ -14,6 +14,7 @@ import { useEditorStore, type TrackMode } from '../../state/editorStore';
 import { useProjectStore } from '../../state/projectStore';
 import { CloseIcon, TrashIcon } from '../icons';
 import { useScene } from './sceneContext';
+import { TrackPresetsPanel } from './TrackPresetsPanel';
 import { TOOLS } from './Toolbar';
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
@@ -111,7 +112,6 @@ function CircuitCard({ preset }: { preset: CircuitPreset }) {
         Delimita el área donde quieras dentro del circuito. Al exportar, la pista carga el circuito instalado en AC
         (<code>content/tracks/{preset.acTrack}</code>) y los conos y líneas se apoyan en su suelo.
         {' '}Requiere: {requires.url ? <a href={requires.url} target="_blank" rel="noreferrer">{requires.name}</a> : requires.name} ({requires.author}).
-        {requires.bundled && <> Está en el repositorio: <code>{requires.bundled}</code> (descomprímelo en <code>content/tracks</code>).</>}
       </p>
       <button className="btn btn-sm" onClick={() => commit(actions.clearPreset)}>
         Pasar a mapa libre
@@ -447,6 +447,7 @@ export function ToolPanel() {
   const body = {
     area: <AreaPanel />,
     track: <TrackPanel />,
+    trackPresets: <TrackPresetsPanel />,
     cones: <ConesPanel />,
     startFinish: <GatesPanel kind="startFinish" />,
     sectors: <GatesPanel kind="sectors" />,

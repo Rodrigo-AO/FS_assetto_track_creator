@@ -88,7 +88,7 @@ function normalizeProject(raw: unknown): TrackProject | null {
   if (!(p.area === null || (isArray(p.area) && p.area.every(isLatLng)))) return null;
   if (!track || typeof track !== 'object' || !isArray(track.anchors)) return null;
   if (!track.anchors.every((a) => !!a && typeof a === 'object' && isLatLng((a as { position?: unknown }).position))) return null;
-  for (const key of ['zones', 'dirt', 'relief', 'cones', 'sectors'] as const) if (key in p && !isArray(p[key])) return null;
+  for (const key of ['zones', 'dirt', 'relief', 'cones', 'sectors', 'markings'] as const) if (key in p && !isArray(p[key])) return null;
   const empty = createEmptyProject();
   return { ...empty, ...(p as Partial<TrackProject>), track: { ...empty.track, ...(track as Partial<TrackProject['track']>) } };
 }

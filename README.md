@@ -15,6 +15,7 @@ Abre http://localhost:5173. Para instalar las pistas directamente en el juego, l
 
 1. **Crear circuito** → *Delimitar área* (polígono o rectángulo). Fuera del área el mapa se oscurece y se activan el resto de herramientas.
 2. **Track creator**: traza la pista por puntos, con la pluma Bézier o a mano alzada. Ancho de 3 m por defecto (simétrico o por lado, arrastrando los bordes discontinuos) y conos automáticos cada 5 m: azules a la izquierda y amarillos a la derecha.
+   **Track presets**: circuitos ya hechos (trazado, conos y salida). *Skidpad* según FS Rules 2026 (D4.1), que se coloca con un clic y se gira desde el panel, y tres AutoX que se cargan en su sitio real: *Jerez Parking*, *Jerez Neumáticos* e *Isla Mágica Pruebas de Piloto* (o se colocan donde quieras). Sustituyen el trazado, los conos y las líneas actuales; se puede deshacer y editar después.
 3. **Salida / Meta** (obligatoria) y **Sectores**: clic sobre la pista.
 4. **Conos** manuales (azul, amarillo, naranja, naranja grande) y **Tipo de suelo** (asfalto, césped o grava). La opción *Hitbox* de la herramienta Conos afecta a todos los conos:
    - **Activada:** los conos son objetos físicos de AC que el coche derriba y arrastra, con la masa de un cono real (**0,45 kg**). **Requiere Custom Shaders Patch con la física extendida:** la pista exportada la activa en `data/surfaces.ini` (`WAV_PITCH=extended-0` en `[SURFACE_0]` y una sección `[DYNAMIC_OBJECTS_ATC_CONES]` con la masa). Sin CSP, AC no puede abrir una pista con conos derribables.
@@ -28,7 +29,7 @@ Abre http://localhost:5173. Para instalar las pistas directamente en el juego, l
 
 ## Presets con escenario 3D
 
-El desplegable **Presets**, junto a «Menú», ofrece dos escenarios modelados a mano en Blender a partir de imágenes de Google Maps, Street View y la ortofoto PNOA: **Parking Isla Mágica** (parking de asfalto con farolas, caseta de seguridad y muros de chapa) y **Pistas ETSI** (pista verde hundida que pasa bajo un puente y desemboca en un segundo círculo verde). Al elegir una, el área queda fijada y, al exportar, la pista incluye el escenario 3D (`models.ini` con dos modelos), con conos, líneas y coches apoyados en el terreno.
+El desplegable **Presets**, junto a «Menú», ofrece cuatro escenarios modelados en Blender a partir de imágenes de Google Maps, Street View y la ortofoto PNOA: **Parking Isla Mágica** (parking de asfalto con farolas, caseta de seguridad y muros de chapa), **Pistas ETSI** (pista verde hundida que pasa bajo un puente y desemboca en un segundo círculo verde), **Parking Jerez** (aparcamiento del Circuito de Jerez con el trazado pintado) y **Karting Jerez** (Jerez Neumáticos, con sus muros de neumáticos). Los dos de Jerez llevan la pendiente media real (MDT05 del IGN). Al elegir una, el área queda fijada y, al exportar, la pista incluye el escenario 3D (`models.ini` con dos modelos), con conos, líneas y coches apoyados en el terreno.
 
 - Modelos editables: `presets/<id>/<id>.blend` (Git LFS).
 - Escenarios exportados: `public/presets/<id>/` (kn5, `terrain.json`, `manifest.json`, `preview.jpg`).
@@ -40,6 +41,14 @@ powershell -File tools/presets/build_preset.ps1 etsi
 
 Referencias visuales: Google Maps y Street View (solo para medir) y PNOA máxima actualidad (CC-BY 4.0 scne.es). Texturas CC0 de [Poly Haven](https://polyhaven.com).
 
+### Track presets de AutoX
+
+Los datos de `src/domain/trackPresets/autocross.json` los genera `tools/track_presets/digitize.py` a partir de los dibujos de la página de Notion «Circuitos de autoX», georreferenciados contra la ortofoto PNOA (`tools/track_presets/georef.json`):
+
+```bash
+tools/presets/.venv/Scripts/python.exe tools/track_presets/digitize.py
+```
+
 ### Circuitos de Assetto Corsa
 
 El mismo desplegable ofrece circuitos ya instalados en AC: **Circuit de Barcelona-Catalunya** y **Hockenheimring**. Sobre ellos el área se delimita libremente y la app solo genera los conos, las líneas y los puntos de salida; el suelo es el del circuito (no se genera asfalto ni zonas de «Tipo de suelo»). La pista exportada carga los kn5 del circuito instalado con rutas `../<circuito>/…`, sin copiarlos.
@@ -49,9 +58,9 @@ Dependencias (deben estar en `assettocorsa/content/tracks`):
 | Preset | Carpeta | Origen |
 |---|---|---|
 | Circuit de Barcelona-Catalunya | `ks_barcelona` (trazado `layout_gp`) | Kunos, incluido en Assetto Corsa |
-| Hockenheimring | `t78_hockenheimring` (trazado `gp`) | **Incluido en el repositorio:** [`resources/tracks/T78_Hockenheimring_AC_v12.zip`](resources/tracks/T78_Hockenheimring_AC_v12.zip). Es el mod [Hockenheimring Multi Layout](https://www.racedepartment.com/downloads/hockenheimring-multi-layout.7223/) de Tommy78 |
+| Hockenheimring | `t78_hockenheimring` (trazado `gp`) | Mod [Hockenheimring Multi Layout](https://www.overtake.gg/downloads/hockenheimring-multi-layout.7223/) de Tommy78 |
 
-Para instalar Hockenheim, descomprime el .zip en `assettocorsa/content/tracks`. Crea la carpeta `t78_hockenheimring`. El .zip va en Git LFS (208 MB): tras clonar, ejecuta `git lfs pull` si no se ha descargado. Es un mod de terceros sin licencia de redistribución, así que no hagas público el repositorio con él dentro.
+Para instalar Hockenheim, descarga el mod y descomprímelo en `assettocorsa/content/tracks`. Crea la carpeta `t78_hockenheimring`.
 
 - El servidor local (`npm run dev`) lee los kn5 del circuito para saber qué modelos cargar y la altura de su suelo bajo el área. Nada derivado del circuito se guarda en el repositorio.
 - **Capa «Superficies de AC»** (leyenda abajo a la izquierda): pinta sobre el satélite las superficies físicas del circuito de AC (asfalto de pista, pianos, pit lane, escapatorias asfaltadas, césped y grava). El satélite y el modelo de AC difieren varios metros en algunas zonas, así que construye sobre esta capa, no sobre el asfalto de la foto.

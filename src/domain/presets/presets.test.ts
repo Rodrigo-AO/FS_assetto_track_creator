@@ -12,13 +12,16 @@ import { heightAt, parseTerrain, terrainRange } from './terrain';
 
 describe('presets', () => {
   it('incluye los escenarios 3D y los circuitos de AC', () => {
-    expect(PRESETS.map((p) => p.id)).toEqual(['isla_magica', 'etsi', 'montmelo', 'hockenheim']);
-    expect(PRESETS.map((p) => p.kind)).toEqual(['scene', 'scene', 'circuit', 'circuit']);
+    expect(PRESETS.map((p) => p.id)).toEqual(['isla_magica', 'etsi', 'parking_jerez', 'karting_jerez', 'montmelo', 'hockenheim']);
+    expect(PRESETS.map((p) => p.kind)).toEqual(['scene', 'scene', 'scene', 'scene', 'circuit', 'circuit']);
     expect(circuitPresetById('montmelo')).toMatchObject({ acTrack: 'ks_barcelona', layout: 'layout_gp' });
-    expect(circuitPresetById('hockenheim')?.requires.url).toContain('racedepartment');
-    // El mod de Hockenheim va en el repositorio (Git LFS) para no tener que buscarlo.
-    const bundled = circuitPresetById('hockenheim')!.requires.bundled!;
-    expect(existsSync(fileURLToPath(new URL(`../../../${bundled}`, import.meta.url)))).toBe(true);
+    expect(circuitPresetById('hockenheim')?.requires.url).toContain('hockenheimring-multi-layout');
+    // Cada escenario tiene sus archivos generados.
+    for (const p of PRESETS.filter((q) => q.kind === 'scene')) {
+      for (const f of [`${p.id}.kn5`, 'terrain.json', 'manifest.json', 'preview.jpg']) {
+        expect([p.id, f, existsSync(fileURLToPath(new URL(`../../../public/presets/${p.id}/${f}`, import.meta.url)))]).toEqual([p.id, f, true]);
+      }
+    }
     expect(circuitPresetById('etsi')).toBeNull();
     expect(presetById('etsi')?.polygon).toHaveLength(11);
     expect(presetById('nada')).toBeNull();

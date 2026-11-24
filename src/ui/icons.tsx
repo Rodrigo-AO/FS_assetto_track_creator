@@ -64,6 +64,13 @@ export const TrackIcon = icon(
     <path d="M18 7l3-3" />
   </>,
 );
+export const TrackPresetsIcon = icon(
+  <>
+    <circle cx="8" cy="12" r="4.5" />
+    <circle cx="16" cy="12" r="4.5" />
+    <path d="M12 3v4M12 17v4" />
+  </>,
+);
 export const ExportIcon = icon(
   <>
     <path d="M12 4v11" />

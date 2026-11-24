@@ -9,6 +9,14 @@ export interface Cone {
   readonly color: ConeColor;
 }
 
+/** Línea pintada en el suelo, solo visual (p. ej. los círculos del skidpad). */
+export interface Marking {
+  readonly id: string;
+  readonly points: readonly LatLng[];
+  /** Ancho de la línea (m). */
+  readonly width: number;
+}
+
 /** Material que esparce el Brush sobre el circuito. */
 export type DirtMaterial = 'sand' | 'gravel';
 
@@ -72,6 +80,8 @@ export interface TrackLayout {
    * el del punto anterior. Falta en proyectos antiguos (entonces DEFAULT_TRACK_WIDTH).
    */
   readonly width?: number;
+  /** Distancia del primer coche de la parrilla a la línea de salida (m); si falta, la de la app. */
+  readonly startOffset?: number;
 }
 
 export interface TrackProject {
@@ -91,6 +101,8 @@ export interface TrackProject {
   readonly track: TrackLayout;
   readonly startFinish: Gate | null;
   readonly sectors: readonly Gate[];
+  /** Líneas pintadas (las ponen los Track presets). */
+  readonly markings: readonly Marking[];
 }
 
 export const DEFAULT_TRACK_WIDTH = 3;
@@ -111,5 +123,6 @@ export function createEmptyProject(): TrackProject {
     track: { anchors: [], closed: true, symmetric: true, autoCones: true, coneSpacing: DEFAULT_CONE_SPACING, width: DEFAULT_TRACK_WIDTH },
     startFinish: null,
     sectors: [],
+    markings: [],
   };
 }
