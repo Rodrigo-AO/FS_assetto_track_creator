@@ -11,6 +11,7 @@ import { pointInRing } from '../geometry/polygon';
 import { buildScene } from '../project/scene';
 import { createEmptyProject, type TrackProject } from '../project/types';
 import { presetById } from '../presets/presets';
+import { ACCELERATION, ACCELERATION_START_M } from './acceleration';
 import { SKIDPAD, SKIDPAD_START_M } from './skidpad';
 import { applyTrackPreset, applyTrackPresetAtHome, placer, presetFits, presetOutline, TRACK_PRESETS, trackPresetById } from './trackPresets';
 
@@ -89,10 +90,54 @@ describe('skidpad (FS Rules 2026, D4.1)', () => {
   });
 });
 
+describe('acceleration (FS Rules 2026, D5.1)', () => {
+  const acceleration = trackPresetById('acceleration')!;
+  const longArea = [ll(-30, -80), ll(30, -80), ll(30, 130), ll(-30, 130)];
+  const place = (rotationDeg = 0): TrackProject => applyTrackPreset({ ...createEmptyProject(), area: longArea }, acceleration, { center: ll(0, 0), rotationDeg });
+
+  it('recta de 75 m entre salida y meta, 3 m de ancho y conos cada 5 m', () => {
+    const scene = buildScene(place())!;
+    const start = scene.startFinish!;
+    const [finish] = scene.sectors;
+    expect(distance(start.left, finish.gate.left)).toBeCloseTo(ACCELERATION.length, 1);
+    expect(distance(start.left, start.right)).toBeCloseTo(3, 3);
+    expect(Math.min(...scene.track!.samples.map((m) => m.widthLeft + m.widthRight))).toBeCloseTo(ACCELERATION.width, 3);
+    const side = acceleration.layout.cones.filter((c) => c.color === 'blue').map((c) => c.p[1]);
+    expect(side).toHaveLength(14);
+    side.slice(1).forEach((y, i) => expect(y - side[i]).toBeCloseTo(ACCELERATION.coneSpacing, 5));
+    expect(acceleration.layout.cones.filter((c) => c.color === 'orangeBig')).toHaveLength(4);
+    // Ningún cono invade el carril.
+    for (const c of scene.cones) expect(Math.abs(c.position.x)).toBeGreaterThan(1.5);
+  });
+
+  it('el coche sale con el morro 0,30 m antes de la línea y la meta es el primer sector', () => {
+    const p = place();
+    const scene = buildScene(p)!;
+    const [first] = gridPoses(scene, scene.startFinish!, 1, p.track.startOffset);
+    expect(p.track.startOffset).toBe(ACCELERATION_START_M);
+    expect(scene.startFinish!.left.y - first.position.y).toBeCloseTo(ACCELERATION_START_M, 1);
+    expect(first.forward.y).toBeGreaterThan(0.99);
+    expect(p.sectors).toHaveLength(1);
+    expect(exportWarnings(p, scene).filter((w) => /sector|salida|área/i.test(w))).toEqual([]);
+  });
+
+  it('girado y exportado: salida, meta y conos giran con el preset', () => {
+    const p = place(90);
+    const scene = buildScene(p)!;
+    expect(validateForExport(p, scene)).toEqual([]);
+    expect(Math.abs(scene.sectors[0].gate.left.x - scene.sectors[0].gate.right.x)).toBeLessThan(0.01); // la meta gira con el preset
+    const files = buildTrackFiles(p, { trackId: 'atc_acc', perimeterWalls: false, satellite: null });
+    const names = readKn5(files['atc_acc.kn5']).root.children.map((n) => n.name);
+    expect(names).toEqual(expect.arrayContaining(['AC_TIME_0_L', 'AC_TIME_1_L', 'AC_TIME_1_R', 'AC_START_0', 'LINE_MARKINGS_0']));
+    expect(presetFits(acceleration.layout, { center: ll(0, 0), rotationDeg: 0 }, longArea)).toBe(true);
+    expect(presetFits(acceleration.layout, { center: ll(0, 0), rotationDeg: 0 }, area)).toBe(false);
+  });
+});
+
 describe('Track presets de AutoX', () => {
-  it('incluye el skidpad y los tres circuitos de Notion', () => {
-    expect(TRACK_PRESETS.map((t) => t.name)).toEqual(['Skidpad', 'Jerez Parking', 'Jerez Neumáticos', 'Isla Mágica Pruebas de Piloto']);
-    expect(TRACK_PRESETS.map((t) => t.home?.presetId ?? null)).toEqual([null, 'parking_jerez', 'karting_jerez', 'isla_magica']);
+  it('incluye skidpad, acceleration y los tres circuitos de Notion', () => {
+    expect(TRACK_PRESETS.map((t) => t.name)).toEqual(['Skidpad', 'Acceleration', 'Jerez Parking', 'Jerez Neumáticos', 'Isla Mágica Pruebas de Piloto']);
+    expect(TRACK_PRESETS.map((t) => t.home?.presetId ?? null)).toEqual([null, null, 'parking_jerez', 'karting_jerez', 'isla_magica']);
   });
 
   for (const t of TRACK_PRESETS.filter((q) => q.home)) {
@@ -158,7 +203,7 @@ describe('colocación', () => {
   });
 
   it('el nombre puesto por la app cambia con el preset; el del usuario se respeta', () => {
-    const [, parking, neumaticos] = TRACK_PRESETS;
+    const [parking, neumaticos] = TRACK_PRESETS.filter((t) => t.home?.presetId.includes('jerez'));
     const p = applyTrackPresetAtHome(applyTrackPresetAtHome(createEmptyProject(), parking), neumaticos);
     expect(p.name).toBe('Jerez Neumáticos');
     expect(p.preset).toBe('karting_jerez');

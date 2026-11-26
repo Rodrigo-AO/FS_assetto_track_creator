@@ -28,6 +28,8 @@ export interface PresetLayout {
   readonly closed: boolean;
   readonly cones: readonly PresetCone[];
   readonly gate: { readonly left: XY; readonly right: XY };
+  /** Líneas de sector (AC_TIME_1…), en el orden de la marcha. */
+  readonly sectors?: readonly { readonly left: XY; readonly right: XY }[];
   readonly markings?: readonly PresetMarking[];
   /** Distancia del primer coche a la línea de salida (m). */
   readonly startOffset?: number;

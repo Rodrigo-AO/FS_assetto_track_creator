@@ -49,13 +49,14 @@ export function gateTrackPosition(geometry: TrackGeometry, g: LocalGate): number
   const { samples, closed } = geometry;
   const center = gateCenter(g);
   const nearest = samples[nearestSampleIndex(samples, center)];
-  if (closed) return nearest.s;
+  if (closed) return nearest.s;  // (en cerrados basta la muestra: la parrilla queda a ±0,25 m)
   const best = distance(nearest.position, center);
   const first = samples.findIndex((m) => distance(m.position, center) < best + SAME_PLACE_M);
   // Dentro de esa primera pasada, la muestra más próxima.
   let i = first;
   while (i + 1 < samples.length && distance(samples[i + 1].position, center) < distance(samples[i].position, center)) i++;
-  return samples[i].s;
+  // Afinado entre muestras: proyección del centro de la línea sobre la tangente.
+  return Math.min(Math.max(samples[i].s + dot(sub(center, samples[i].position), samples[i].tangent), 0), geometry.length);
 }
 
 /**

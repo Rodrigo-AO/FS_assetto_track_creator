@@ -3,7 +3,7 @@ import { leftNormal, scale, sub, type Vec2 } from '../../domain/geometry/vec2';
 import type { Scene } from '../../domain/project/scene';
 import type { ConeColor, SurfaceType, TrackProject } from '../../domain/project/types';
 import { SURFACES } from '../../domain/surfaces/surfaceTypes';
-import { sampleAt } from '../../domain/track/centerline';
+import { pointAt } from '../../domain/track/centerline';
 import { gateCenter, gateForward, gateTrackPosition, type LocalGate } from '../../domain/track/gates';
 import { encodeDds } from '../binary/dds';
 import type { RgbaImage } from '../binary/image';
@@ -71,7 +71,7 @@ export function gridPoses(scene: Scene, gate: LocalGate, count: number, firstOff
   return Array.from({ length: count }, (_, i) => {
     const back = firstOffset + i * GRID_SPACING_M;
     if (scene.track) {
-      const m = sampleAt(scene.track, gateTrackPosition(scene.track, gate) - back);
+      const m = pointAt(scene.track, gateTrackPosition(scene.track, gate) - back);
       return { position: m.position, forward: m.tangent };
     }
     const forward = gateForward(gate);

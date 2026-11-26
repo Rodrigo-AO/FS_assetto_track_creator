@@ -154,3 +154,11 @@ export function sampleAt(geometry: TrackGeometry, s: number): CenterlineSample {
   }
   return samples[lo];
 }
+
+/** Punto exacto a una distancia `s` del inicio: la muestra anterior, avanzada por su tangente. */
+export function pointAt(geometry: TrackGeometry, s: number): { position: Vec2; tangent: Vec2 } {
+  const { length, closed } = geometry;
+  const target = closed ? ((s % length) + length) % length : Math.min(Math.max(s, 0), length);
+  const m = sampleAt(geometry, target);
+  return { position: add(m.position, scale(m.tangent, target - m.s)), tangent: m.tangent };
+}

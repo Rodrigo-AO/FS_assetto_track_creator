@@ -10,6 +10,7 @@ import { createEmptyProject, type TrackProject } from '../project/types';
 import { PRESETS, presetById } from '../presets/presets';
 import { buildTrackGeometry } from '../track/centerline';
 import autocross from './autocross.json';
+import { accelerationLayout } from './acceleration';
 import { skidpadLayout } from './skidpad';
 import type { PresetLayout, XY } from './types';
 
@@ -39,6 +40,13 @@ export const TRACK_PRESETS: readonly TrackPreset[] = [
     name: 'Skidpad',
     description: 'Prueba de skidpad de Formula Student (FS Rules 2026, D4.1): dos círculos de 15,25 / 21,25 m a 18,25 m entre centros.',
     layout: skidpadLayout(),
+    home: null,
+  },
+  {
+    id: 'acceleration',
+    name: 'Acceleration',
+    description: 'Prueba de aceleración de Formula Student (FS Rules 2026, D5.1): recta de 75 m y 3 m de ancho, con conos cada 5 m y zona de frenada.',
+    layout: accelerationLayout(),
     home: null,
   },
   autocrossPreset('jerez_parking', 'Jerez Parking', 'parking_jerez', 'AutoX sobre el trazado pintado del parking del Circuito de Jerez, con barreras de conos que estrechan el carril.'),
@@ -74,11 +82,12 @@ export function presetOutline(layout: PresetLayout): { left: XY[]; right: XY[]; 
   return track ? { left: pts(track.leftEdge), right: pts(track.rightEdge), length: track.length } : { left: [], right: [], length: 0 };
 }
 
-/** ¿Caben todos los conos y la salida dentro del área? (el carril de entrada puede sobresalir) */
+/** ¿Caben todos los conos, la salida y los sectores dentro del área? (el carril de entrada puede sobresalir) */
 export function presetFits(layout: PresetLayout, placement: Placement, area: readonly LatLng[]): boolean {
   const at = placer(placement);
   const ring = area.map((p) => ({ x: p.lng, y: p.lat }));
-  return [...layout.cones.map((c) => c.p), layout.gate.left, layout.gate.right].every((p) => {
+  const gates = [layout.gate, ...(layout.sectors ?? [])].flatMap((g) => [g.left, g.right]);
+  return [...layout.cones.map((c) => c.p), ...gates].every((p) => {
     const q = at(p);
     return pointInRing({ x: q.lng, y: q.lat }, ring);
   });
@@ -88,7 +97,7 @@ export function presetFits(layout: PresetLayout, placement: Placement, area: rea
 const isDefaultName = (p: TrackProject): boolean =>
   [createEmptyProject().name, ...PRESETS.map((s) => s.name), ...TRACK_PRESETS.map((t) => t.name)].includes(p.name);
 
-/** Sustituye trazado, conos, líneas de tiempo y marcas por los del preset. Lo demás se conserva. */
+/** Sustituye trazado, conos, líneas de tiempo (salida y sectores) y marcas por los del preset. Lo demás se conserva. */
 export function applyTrackPreset(p: TrackProject, preset: TrackPreset, placement: Placement): TrackProject {
   const at = placer(placement);
   const { layout } = preset;
@@ -113,7 +122,7 @@ export function applyTrackPreset(p: TrackProject, preset: TrackPreset, placement
     },
     cones: layout.cones.map((c) => ({ id: newId(), position: at(c.p), color: c.color })),
     startFinish: { id: newId(), left: at(layout.gate.left), right: at(layout.gate.right) },
-    sectors: [],
+    sectors: (layout.sectors ?? []).map((g) => ({ id: newId(), left: at(g.left), right: at(g.right) })),
     markings: (layout.markings ?? []).map((m) => ({ id: newId(), points: m.points.map(at), width: m.width })),
   };
 }
